@@ -12,9 +12,9 @@ default_database_path = os.path.join(script_directory,
                                      "20220706_Auftragsdatenbank.xlsm")
 
 
-#TODO: Always current orders in table?
+# TODO: Always current orders in table?
 # What about orders that have already finished?
-def get_orders(path : str = default_database_path) -> pd.DataFrame:
+def get_orders(path: str = default_database_path) -> pd.DataFrame:
     """
     Opens an excel document to return its listed orders as a pandas dataframe.
 
@@ -34,23 +34,23 @@ def get_orders(path : str = default_database_path) -> pd.DataFrame:
         Table of orders as pandas dataframe.
     """
     sheet_name = 'Datenbank_Auftragsdaten'
-    order_df = pd.read_excel(path, sheet_name) # Read file
+    order_df = pd.read_excel(path, sheet_name)  # Read file
     order_df = order_df.rename(columns=order_df.iloc[10])
     # Name first column to reference it for deletion
-    order_df = order_df.rename(columns={order_df.columns[0]:'Nichts'})
+    order_df = order_df.rename(columns={order_df.columns[0]: 'Nichts'})
     order_df = order_df.drop('Nichts', axis=1)
     # Ignore first 14 rows since data starts at row 15
     order_df = order_df.drop(np.arange(13))
     order_df = order_df.reset_index(drop=True)
     order_df = order_df[['Fertigungsauf-tragsnummer', 'Artikelnummer',
-            'Auftragsmenge',  'Nummer Wickel-rohrmaschine',
-            'Werkzeug-nummer', 'Rüstzeit für WKZ/Materialwechsel',
-            'Rüstzeit für Coilwechsel', 'Maschinen-laufzeit',
-            'Fertigungszeit pro Mengeneinheit']]
+                         'Auftragsmenge',  'Nummer Wickel-rohrmaschine',
+                         'Werkzeug-nummer', 'Rüstzeit für WKZ/Materialwechsel',
+                         'Rüstzeit für Coilwechsel', 'Maschinen-laufzeit',
+                         'Fertigungszeit pro Mengeneinheit']]
     return order_df
 
 
-def calculate_setup_time(tool1 : str, tool2 : str) -> int:
+def calculate_setup_time(tool1: str, tool2: str) -> int:
     """
     Returns 15 if both given tools are not equal, otherwise returns 0.
 
@@ -79,8 +79,8 @@ def calculate_setup_time(tool1 : str, tool2 : str) -> int:
     return setup_time
 
 
-#TODO: Rüstzeit erste Maschine?
-#TODO: Startzeit current time?
+# TODO: Rüstzeit erste Maschine?
+# TODO: Startzeit current time?
 def calculate_timestamps(order_df, start, last_tool):
     """
     Calculates a simple termination from the given orders and returns it.
@@ -102,22 +102,22 @@ def calculate_timestamps(order_df, start, last_tool):
                                               timestamp.day+1, 6, 0, 0)
             print(order_num)
             order_df.loc[order_df['Fertigungsauf-tragsnummer'] == order_num,
-                   ['starttime']] = timestamp
+                         ['starttime']] = timestamp
             tool = row['Werkzeug-nummer']
             setup_time = calculate_setup_time(tool, last_tool)
             order_df.loc[order_df['Fertigungsauf-tragsnummer'] == order_num,
-                   ['setup_time']] = setup_time
+                         ['setup_time']] = setup_time
             prod_time = int(row['Maschinen-laufzeit'])
-            #try:
+            # try:
             #    prod_time = int(row['Maschinen-laufzeit'])
-            #except Exception:
+            # except Exception:
             # ?
             #    prod_time = 60
             runtime = prod_time + setup_time
             timestamp = timestamp + datetime.timedelta(minutes=runtime)
             order_num = row['Fertigungsauf-tragsnummer']
             order_df.loc[order_df['Fertigungsauf-tragsnummer'] == order_num,
-                   ['endtime']] = timestamp
+                         ['endtime']] = timestamp
             last_tool = tool
     return order_df
 
@@ -126,4 +126,4 @@ def calculate_timestamps(order_df, start, last_tool):
 #df = get_orders()
 #df = calculate_timestamps(df, datetime.datetime(2022, 7, 20, 6, 0, 0), 'A0 2')
 #df = df[['Nummer Wickel-rohrmaschine', 'starttime', 'endtime', 'setup_time']]
-#print(df)
+# print(df)
