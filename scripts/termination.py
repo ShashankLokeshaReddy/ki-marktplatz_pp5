@@ -8,7 +8,7 @@ import pandas as pd
 # Current script directory
 script_directory = pathlib.Path(__file__).parent.resolve()
 # Default path of the order database excel file
-default_database_path = os.path.join(script_directory,
+default_database_path = os.path.join(script_directory, '..', 'data',
                                      "20220706_Auftragsdatenbank.xlsm")
 
 
@@ -31,7 +31,9 @@ def get_orders(path: str = default_database_path) -> pd.DataFrame:
     Returns
     -------
     DataFrame
-        Table of orders as pandas dataframe.
+        Table of orders as pandas dataframe. Column names:
+            job, item, order_release, machine, tool, setuptime_material,
+            setuptime_coil, duration_machine, duration_hand, deadline
     """
     sheet_name = 'Datenbank_Auftragsdaten'
     order_df = pd.read_excel(path, sheet_name)  # Read file
@@ -43,11 +45,47 @@ def get_orders(path: str = default_database_path) -> pd.DataFrame:
     order_df = order_df.drop(np.arange(13))
     order_df = order_df.reset_index(drop=True)
     order_df = order_df[['Fertigungsauf-tragsnummer', 'Artikelnummer',
-                         'Auftragsmenge',  'Nummer Wickel-rohrmaschine',
+                         'Auftragseingabe-zeitpunkt',
+                         'Nummer Wickel-rohrmaschine',
                          'Werkzeug-nummer', 'Rüstzeit für WKZ/Materialwechsel',
                          'Rüstzeit für Coilwechsel', 'Maschinen-laufzeit',
-                         'Fertigungszeit pro Mengeneinheit']]
+                         'Dauer Handarbeit',
+                         'spätester Fertigstellungszeitpunkt']]
+    order_df.rename(columns={'Fertigungsauf-tragsnummer': 'job',
+                             'Artikelnummer': 'item',
+                             'Auftragseingabe-zeitpunkt': 'order_release',
+                             'Nummer Wickel-rohrmaschine': 'machine',
+                             'Werkzeug-nummer': 'tool',
+                             'Rüstzeit für WKZ/Materialwechsel':
+                                 'setuptime_material',
+                             'Rüstzeit für Coilwechsel': 'setuptime_coil',
+                             'Maschinen-laufzeit': 'duration_machine',
+                             'Dauer Handarbeit': 'duration_hand',
+                             'spätester Fertigstellungszeitpunkt': 'deadline'},
+                    inplace=True)
     return order_df
+
+
+def get_calendar(path: str = default_database_path) -> pd.DataFrame:
+    """
+    Opens an excel document to return its calendar as a pandas dataframe.
+
+    Requires the excel document to have following specific structure:
+        A sheet named 'Datenbank_Auftragsdaten'.
+        The orders starting at row 15.
+        Column titles like 'Artikelnummer' and more.
+
+    Parameters
+    ----------
+    path : str
+        Path to the excel order database.
+
+    Returns
+    -------
+    DataFrame
+        Table of orders as pandas dataframe.
+    """
+    return
 
 
 def calculate_setup_time(tool1: str, tool2: str) -> int:
@@ -71,6 +109,8 @@ def calculate_setup_time(tool1: str, tool2: str) -> int:
     int
         setup time in minutes
     """
+    tool1 = str(tool1)
+    tool2 = str(tool2)
     # Remove whitespaces and make case insensitive comparison
     if tool1.casefold().replace(' ', '') == tool2.casefold().replace(' ', ''):
         setup_time = 0
@@ -85,45 +125,45 @@ def calculate_timestamps(order_df, start, last_tool):
     """
     Calculates a simple termination from the given orders and returns it.
     """
-    machines = order_df['Nummer Wickel-rohrmaschine'].astype(int).unique()
+    machines = order_df['machine'].astype(int).unique()
     order_df = order_df.assign(starttime=0)
     order_df = order_df.assign(endtime=0)
     order_df = order_df.assign(setup_time=0)
     # Für jede Maschine
     for machine in machines:
         df_machine = order_df[
-            order_df['Nummer Wickel-rohrmaschine'].astype(int) == machine]
+            order_df['machine'].astype(int) == machine]
         timestamp = start
         # Entsprechend der Reihenfolge timestamps berechnen
         for index, row in df_machine.iterrows():
-            order_num = row['Fertigungsauf-tragsnummer']
+            order_num = row['job']
             if timestamp.hour > 18:  # Nächster Tag
                 timestamp = datetime.datetime(timestamp.year, timestamp.month,
-                                              timestamp.day+1, 6, 0, 0)
-            print(order_num)
-            order_df.loc[order_df['Fertigungsauf-tragsnummer'] == order_num,
+                                              timestamp.day + 1, 6, 0, 0)
+            order_df.loc[order_df['job'] == order_num,
                          ['starttime']] = timestamp
-            tool = row['Werkzeug-nummer']
+            tool = row['tool']
             setup_time = calculate_setup_time(tool, last_tool)
-            order_df.loc[order_df['Fertigungsauf-tragsnummer'] == order_num,
+            order_df.loc[order_df['job'] == order_num,
                          ['setup_time']] = setup_time
-            prod_time = int(row['Maschinen-laufzeit'])
+            prod_time = int(row['duration_machine'])
             # try:
-            #    prod_time = int(row['Maschinen-laufzeit'])
+            #    prod_time = int(row['durationmachine'])
             # except Exception:
             # ?
             #    prod_time = 60
             runtime = prod_time + setup_time
             timestamp = timestamp + datetime.timedelta(minutes=runtime)
-            order_num = row['Fertigungsauf-tragsnummer']
-            order_df.loc[order_df['Fertigungsauf-tragsnummer'] == order_num,
+            order_num = row['job']
+            order_df.loc[order_df['job'] == order_num,
                          ['endtime']] = timestamp
             last_tool = tool
     return order_df
 
 
 # Debugging
-#df = get_orders()
-#df = calculate_timestamps(df, datetime.datetime(2022, 7, 20, 6, 0, 0), 'A0 2')
-#df = df[['Nummer Wickel-rohrmaschine', 'starttime', 'endtime', 'setup_time']]
-# print(df)
+df = get_orders()
+print(df)
+df = calculate_timestamps(df, datetime.datetime(2022, 7, 20, 6, 0, 0), 'A0')
+print(df.columns)
+print(df[['job', 'machine', 'starttime', 'endtime', 'setup_time']])
