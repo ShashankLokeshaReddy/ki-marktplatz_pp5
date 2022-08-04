@@ -173,6 +173,7 @@ def compute_machine_job_endtime(order_df, starttime, prev_job, job):
 
 def schedule_orders(order_df, order_machine_mapping, priority_list, planning_period_start, planning_period_end):
     # initiate machine jobs
+    order_df['assigned_machine'] = -1
     machine_endtime = {}
     machine_last_job = {}
     for machine in ('1531', '1532', '1533', '1534', '1535', '1536', '1537', '1541', '1542', '1543'):
@@ -204,6 +205,7 @@ def schedule_orders(order_df, order_machine_mapping, priority_list, planning_per
 
         order_df.loc[(order_df['job'] == job), 'planned_start'] = machine_endtime[machine_tmp_id]
         order_df.loc[(order_df['job'] == job), 'planned_end'] = machine_tmp_endtime
+        order_df.loc[(order_df['job'] == job), 'assigned_machine'] = machine_tmp_id
         machine_endtime[machine_tmp_id] = machine_tmp_endtime
         machine_last_job[machine_tmp_id] = job
 
@@ -220,4 +222,4 @@ order_df = set_order_status(order_df)
 order_machine_mapping = get_order_machine_mapping(order_df)
 priority_list = compute_priority_list(order_df, priority_procedure)
 order_df = schedule_orders(order_df, order_machine_mapping, priority_list, planning_period_start, planning_period_end)
-print(order_df)
+print(order_df[['job', 'assigned_machine', 'planned_start', 'planned_end']])
