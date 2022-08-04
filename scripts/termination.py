@@ -147,11 +147,6 @@ def calculate_timestamps(order_df, start, last_tool):
             order_df.loc[order_df['job'] == order_num,
                          ['setup_time']] = setup_time
             prod_time = int(row['duration_machine'])
-            # try:
-            #    prod_time = int(row['durationmachine'])
-            # except Exception:
-            # ?
-            #    prod_time = 60
             runtime = prod_time + setup_time
             timestamp = timestamp + datetime.timedelta(minutes=runtime)
             order_num = row['job']
@@ -162,8 +157,8 @@ def calculate_timestamps(order_df, start, last_tool):
 
 
 # Debugging
-df = get_orders()
-print(df)
-df = calculate_timestamps(df, datetime.datetime(2022, 7, 20, 6, 0, 0), 'A0')
-print(df.columns)
-print(df[['job', 'machine', 'starttime', 'endtime', 'setup_time']])
+# df = get_orders()
+# print(df)
+# df = calculate_timestamps(df, datetime.datetime(2022, 7, 20, 6, 0, 0), 'A0')
+# print(df.columns)
+# print(df[['job', 'machine', 'starttime', 'endtime', 'setup_time']])
