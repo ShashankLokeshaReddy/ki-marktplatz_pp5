@@ -3,6 +3,7 @@ import pathlib
 import os
 import numpy as np
 import datetime
+from enum import Enum
 
 # project root path
 PROJECT_PATH = pathlib.Path(__file__).parent.parent.resolve()
@@ -10,6 +11,19 @@ PROJECT_PATH = pathlib.Path(__file__).parent.parent.resolve()
 DATA_SOURCE_PATH = os.path.join(PROJECT_PATH, "data", "20220706_Auftragsdatenbank.xlsm")
 # sheet of source file containing database
 DATA_SOURCE_SHEET = 'Datenbank_Auftragsdaten'
+
+class JobStatus(Enum):
+    UNKNOWN = 1
+    UNPLANNED = 2
+    CALCULATED = 3
+    PLANNED = 4
+    IN_PROGRESS = 5
+
+class PriorityProcedure(Enum):
+    FIRST_COME_FIRST_SERVE = 1
+    SHORTEST_OPERATION_TIME = 2
+    LONGEST_OPERATION_TIME = 3
+    CUSTOM = 4 # TODO no need to implement?
 
 def get_date(datetime_object):
     return str(datetime_object)[:11]
@@ -75,22 +89,22 @@ def get_orders() -> pd.DataFrame:
     return order_df
 
 # TODO filter out jobs marked with "R"
-# TODO remove jobs outside of planning_period
+# TODO remove jobs after planning period (how to recognize?)
 def filter_orders(order_def, planning_period_start, planning_period_end):
     return order_def
 
 def set_order_status(order_df):
     # set order status according to timestamps
-    order_df['status'] = 'unknown'
+    order_df['status'] = JobStatus.UNKNOWN
     for idx in order_df.index:
         if not pd.isnull(order_df.loc[idx, 'deadline_start']) and not pd.isnull(order_df.loc[idx, 'deadline_end']):
-            order_df.loc[idx, 'status'] = 'unplanned'
+            order_df.loc[idx, 'status'] = JobStatus.UNPLANNED
         if not pd.isnull(order_df.loc[idx, 'calculated_start']) and not pd.isnull(order_df.loc[idx, 'calculated_end']):
-            order_df.loc[idx, 'status'] = 'calculated'
+            order_df.loc[idx, 'status'] = JobStatus.CALCULATED
         if not pd.isnull(order_df.loc[idx, 'planned_start']) and not pd.isnull(order_df.loc[idx, 'planned_end']):
-            order_df.loc[idx, 'status'] = 'planned'
+            order_df.loc[idx, 'status'] = JobStatus.PLANNED
         if not pd.isnull(order_df.loc[idx, 'final_start']):
-            order_df.loc[idx, 'status'] = 'in_work'
+            order_df.loc[idx, 'status'] = JobStatus.IN_PROGRESS
     # remove orders that are already finished
     order_df = order_df.drop(order_df[order_df['final_end'] == pd.NaT].index)
     # TODO compute final_end for orders in_work, where this is not given (order is finished in future)
@@ -125,10 +139,14 @@ def get_order_machine_mapping(order_df):
     return order_machine_mapping
 
 def compute_priority_list(order_df, priority_procedure):
-    if priority_procedure == "first_come_first_serve":
+    if priority_procedure == PriorityProcedure.FIRST_COME_FIRST_SERVE:
         order_df['order_release'] = pd.to_datetime(order_df['order_release'])
         order_df.sort_values(by='order_release')
         return order_df['job'].tolist()
+    elif priority_procedure == PriorityProcedure.SHORTEST_OPERATION_TIME:
+        raise NotImplementedError()
+    elif priority_procedure == PriorityProcedure.LONGEST_OPERATION_TIME:
+        raise NotImplementedError()
     else:
         raise Exception("Unknown priority procedure: " + priority_procedure)
 
@@ -162,12 +180,12 @@ def schedule_orders(order_df, order_machine_mapping, priority_list, planning_per
         machine_last_job[machine] = ''
 
     # add planned and running jobs
-    for job in order_df.loc[order_df['status'] == 'in_work'].iterrows():
+    for job in order_df.loc[order_df['status'] == JobStatus.IN_PROGRESS].iterrows():
         assigned_machine = order_machine_mapping[job][0]
         if job['final_end'] > machine_endtime[assigned_machine]:
             machine_endtime[assigned_machine] = job['final_end']
             machine_last_job[assigned_machine] = job
-    for job in order_df.loc[order_df['status'] == 'planned'].iterrows():
+    for job in order_df.loc[order_df['status'] == JobStatus.PLANNED].iterrows():
         assigned_machine = order_machine_mapping[job][0]
         if job['planned_end'] > machine_endtime[assigned_machine]:
             machine_endtime[assigned_machine] = job['planned_end']
@@ -192,9 +210,9 @@ def schedule_orders(order_df, order_machine_mapping, priority_list, planning_per
     return order_df
 
 # scheduling parameters
-planning_period_start = datetime.datetime(2020, 5, 17, 8, 0, 0)
-planning_period_end = datetime.datetime(2020, 5, 24, 8, 0, 0)
-priority_procedure = "first_come_first_serve"
+planning_period_start = datetime.datetime(2022, 5, 5, 8, 0, 0)
+planning_period_end = datetime.datetime(2022, 5, 12, 8, 0, 0)
+priority_procedure = PriorityProcedure.FIRST_COME_FIRST_SERVE
 
 order_df = get_orders()
 order_df = filter_orders(order_df, planning_period_start, planning_period_end)
