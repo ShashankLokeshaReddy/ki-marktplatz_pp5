@@ -176,9 +176,7 @@ def compute_priority_list(order_df, priority_procedure: PriorityProcedure):
         priority_procedure (_type_): selected procedure to compute the priority list
 
     Raises:
-        NotImplementedError: _description_
-        NotImplementedError: _description_
-        Exception: _description_
+        Exception: unknown priority procedure
 
     Returns:
         _type_: list ordered by priority for scheduling
@@ -228,7 +226,7 @@ def compute_machine_job_endtime(order_df, starttime, job, prev_job=''):
         _type_: datetime of job ending
     """
     # TODO Rüstzeit für Coilwechsel included in Rüstzeit für WKZ/Materialwechsel?
-    setuptime_material = tool_setup_time(order_df, prev_job, job)
+    setuptime_material = tool_setup_time(order_df, job, prev_job)
     order = order_df.loc[order_df['job'] == job]
     machine_time = order['machine_time'].values[0]
     manual_time = order['manual_time'].values[0]
@@ -248,7 +246,7 @@ def schedule_orders(order_df, order_machine_mapping, priority_list, planning_per
     Returns:
         _type_: pandas dataframe of the orders, where all orders within of planning period are planned.
     """
-    # TODO include end of planning period for jobs
+    # TODO consider end of planning period for jobs
     # TODO include calendar and schichtmodell in computation
     # initiate machine jobs
     order_df['assigned_machine'] = -1
@@ -276,7 +274,7 @@ def schedule_orders(order_df, order_machine_mapping, priority_list, planning_per
         machine_tmp_endtime = pd.Timestamp('NaT').to_pydatetime()
         # iterate over possible machines
         for machine in order_machine_mapping[job]:
-            machine_curr_endtime = compute_machine_job_endtime(order_df, machine_endtime[machine], machine_last_job[machine], job)
+            machine_curr_endtime = compute_machine_job_endtime(order_df, machine_endtime[machine], job, machine_last_job[machine])
             if pd.isnull(machine_tmp_endtime) or machine_curr_endtime < machine_tmp_endtime:
                 machine_tmp_id = machine
                 machine_tmp_endtime = machine_curr_endtime
