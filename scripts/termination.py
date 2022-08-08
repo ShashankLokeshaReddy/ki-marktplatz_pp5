@@ -33,7 +33,9 @@ def get_orders(path: str = default_database_path) -> pd.DataFrame:
     DataFrame
         Table of orders as pandas dataframe. Column names:
             job, item, order_release, machine, tool, setuptime_material,
-            setuptime_coil, duration_machine, duration_hand, deadline
+            setuptime_coil, duration_machine, duration_hand, deadline,
+            calculated_start, calculated_end, planned_start, planned_end,
+            actual_start, actual_end
     """
     sheet_name = 'Datenbank_Auftragsdaten'
     order_df = pd.read_excel(path, sheet_name)  # Read file
@@ -44,13 +46,22 @@ def get_orders(path: str = default_database_path) -> pd.DataFrame:
     # Ignore first 14 rows since data starts at row 15
     order_df = order_df.drop(np.arange(13))
     order_df = order_df.reset_index(drop=True)
-    order_df = order_df[['Fertigungsauf-tragsnummer', 'Artikelnummer',
+    order_df = order_df[['Fertigungsauf-tragsnummer',
+                         'Artikelnummer',
                          'Auftragseingabe-zeitpunkt',
                          'Nummer Wickel-rohrmaschine',
-                         'Werkzeug-nummer', 'Rüstzeit für WKZ/Materialwechsel',
-                         'Rüstzeit für Coilwechsel', 'Maschinen-laufzeit',
+                         'Werkzeug-nummer',
+                         'Rüstzeit für WKZ/Materialwechsel',
+                         'Rüstzeit für Coilwechsel',
+                         'Maschinen-laufzeit',
                          'Dauer Handarbeit',
-                         'spätester Fertigstellungszeitpunkt']]
+                         'spätester Fertigstellungszeitpunkt',
+                         'Berechneter Bearbei-tungsbeginn',
+                         'Berechneter Fertigstellungs-zeitpunkt',
+                         'PLAN-Bearbeitungs-beginn',
+                         'PLAN-Fertigstellungs-zeitpunkt',
+                         'IST- Bearbeitungs-beginn',
+                         'IST-Fertigstellungs-zeitpunkt']]
     order_df.rename(columns={'Fertigungsauf-tragsnummer': 'job',
                              'Artikelnummer': 'item',
                              'Auftragseingabe-zeitpunkt': 'order_release',
@@ -61,19 +72,28 @@ def get_orders(path: str = default_database_path) -> pd.DataFrame:
                              'Rüstzeit für Coilwechsel': 'setuptime_coil',
                              'Maschinen-laufzeit': 'duration_machine',
                              'Dauer Handarbeit': 'duration_hand',
-                             'spätester Fertigstellungszeitpunkt': 'deadline'},
+                             'spätester Fertigstellungszeitpunkt': 'deadline',
+                             'Berechneter Bearbei-tungsbeginn':
+                                 'calculated_start',
+                             'Berechneter Fertigstellungs-zeitpunkt':
+                                 'calculated_end',
+                             'PLAN-Bearbeitungs-beginn':
+                                 'planned_start',
+                             'PLAN-Fertigstellungs-zeitpunkt':
+                                 'planned_end',
+                             'IST- Bearbeitungs-beginn':
+                                 'actual_start',
+                             'IST-Fertigstellungs-zeitpunkt':
+                                 'actual_end'},
                     inplace=True)
     return order_df
 
 
-def get_calendar(path: str = default_database_path) -> pd.DataFrame:
+def get_calendar(path: str = default_database_path,
+                 year: int = 2022) -> pd.DataFrame:
     """
+    !STILL NEEDS TO BE IMPLEMENTED!
     Opens an excel document to return its calendar as a pandas dataframe.
-
-    Requires the excel document to have following specific structure:
-        A sheet named 'Datenbank_Auftragsdaten'.
-        The orders starting at row 15.
-        Column titles like 'Artikelnummer' and more.
 
     Parameters
     ----------
@@ -85,6 +105,10 @@ def get_calendar(path: str = default_database_path) -> pd.DataFrame:
     DataFrame
         Table of orders as pandas dataframe.
     """
+    sheet_name = 'Betriebskalender'
+    calender_df = pd.read_excel(path, sheet_name, nrows=50)  # Read file
+    print(calender_df)
+    # TODO finish this function
     return
 
 
@@ -155,6 +179,13 @@ def calculate_timestamps(order_df, start, last_tool):
             last_tool = tool
     return order_df
 
+
+def combine_orders(order_df, start, last_tool):
+    """
+    Combines orders with the same item properties.
+    """
+
+    return
 
 # Debugging
 # df = get_orders()
