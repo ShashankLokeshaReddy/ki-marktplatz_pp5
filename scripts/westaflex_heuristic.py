@@ -26,9 +26,28 @@ class PriorityProcedure(Enum):
     CUSTOM = 4 # TODO no need to implement?
 
 def get_date(datetime_object):
+    """Extracts the date from a datetime object as a string.
+
+    Args:
+        datetime_object (_type_): The datetime object that contains the date
+
+    Returns:
+        _type_: A string, which contains the date
+    """
     return str(datetime_object)[:11]
 
 def combine_datetime_columns(df, col_name):
+    """Combines two columns into one datetime column, where one column contains the date and one column contains the time.
+    The date column is assumed to be in the col_name column and time is in the directly following column.
+    The result will be stored in the col_name column.
+
+    Args:
+        df (_type_): A pandas dataframe containing the orders
+        col_name (_type_): the selected column for datetime combination
+
+    Returns:
+        _type_: a pandas dataframe containing the orders with a combined datetime column
+    """
     df[col_name] = df[col_name].apply(get_date) + df.iloc[:, df.columns.get_loc(col_name)+1].astype(str)
     df[col_name] = pd.to_datetime(df[col_name], errors='coerce')
     a = df[col_name]
@@ -288,8 +307,8 @@ def schedule_orders(order_df, order_machine_mapping, priority_list, planning_per
     return order_df
 
 # scheduling parameters
-planning_period_start = datetime.datetime(2022, 5, 5, 8, 0, 0)
-planning_period_end = datetime.datetime(2022, 5, 12, 8, 0, 0)
+planning_period_start = datetime.datetime(2022, 5, 5, 8, 0, 0) # 05.05.2020 8:00:00
+planning_period_end = datetime.datetime(2022, 5, 12, 8, 0, 0) # 12.05.22 8:00:00
 priority_procedure = PriorityProcedure.FIRST_COME_FIRST_SERVE
 
 order_df = get_orders()
