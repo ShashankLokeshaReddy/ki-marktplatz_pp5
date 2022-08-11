@@ -23,7 +23,6 @@ class PriorityProcedure(Enum):
     FIRST_COME_FIRST_SERVE = 1
     SHORTEST_OPERATION_TIME = 2
     LONGEST_OPERATION_TIME = 3
-    CUSTOM = 4 # TODO no need to implement?
 
 def get_date(datetime_object):
     """Extracts the date from a datetime object as a string.
@@ -113,9 +112,10 @@ def get_orders() -> pd.DataFrame:
     return order_df
 
 # TODO filter out jobs marked with "R"
-# TODO remove jobs after planning period (how to recognize?)
-def filter_orders(order_def, planning_period_start, planning_period_end):
+def filter_orders(order_df, planning_period_start, planning_period_end):
     """Removes orders, which are marked for removal and are scheduled outside of the planning period.
+    Orders are outside of the planning period if they are already finished (final_end before planning_period_start) or if they are planned
+    after the planning period (planning_start after planning_period_end)
 
     Args:
         order_def (_type_): pandas dataframe containing the orders
@@ -125,7 +125,9 @@ def filter_orders(order_def, planning_period_start, planning_period_end):
     Returns:
         _type_: pandas dataframe of filtered orders
     """
-    return order_def
+    order_df = order_df[(pd.isnull(order_df['final_end'])) | (order_df['final_end'] < planning_period_start)]
+    order_df = order_df[(pd.isnull(order_df['planned_start'])) | (order_df['planned_start'] < planning_period_end)]
+    return order_df
 
 def set_order_status(order_df):
     """Assign a job status to each order according to their time stamps.
@@ -146,8 +148,6 @@ def set_order_status(order_df):
             order_df.loc[idx, 'status'] = JobStatus.PLANNED
         if not pd.isnull(order_df.loc[idx, 'final_start']):
             order_df.loc[idx, 'status'] = JobStatus.IN_PROGRESS
-    # TODO remove orders that are already finished
-    # order_df = order_df.drop(order_df[order_df['final_end'] == pd.NaT].index)
     # TODO compute final_end for orders in_work, where this is not given (order is finished in future)
     return order_df
 
