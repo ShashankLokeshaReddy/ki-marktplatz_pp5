@@ -125,7 +125,7 @@ def filter_orders(order_df, planning_period_start, planning_period_end):
     Returns:
         _type_: pandas dataframe of filtered orders
     """
-    order_df = order_df[(pd.isnull(order_df['final_end'])) | (order_df['final_end'] < planning_period_start)]
+    order_df = order_df[(pd.isnull(order_df['final_end'])) | (order_df['final_end'] > planning_period_start)]
     order_df = order_df[(pd.isnull(order_df['planned_start'])) | (order_df['planned_start'] < planning_period_end)]
     return order_df
 
@@ -232,7 +232,7 @@ def tool_setup_time(order_df, job, job_prev=''):
     else:
         return order['setuptime_material'].values[0]
 
-def compute_machine_job_endtime(order_df, starttime, job, prev_job=''):
+def compute_job_endtime(order_df, starttime, job, prev_job=''):
     """Compute end datetime for job execution including setup time, machine time and manual time.
 
     Args:
@@ -265,7 +265,7 @@ def schedule_orders(order_df, order_machine_mapping, priority_list, planning_per
     Returns:
         _type_: pandas dataframe of the orders, where all orders within of planning period are planned.
     """
-    # TODO consider end of planning period for jobs
+    # TODO consider end of planning period for jobs during scheduling
     # TODO include calendar and schichtmodell in computation
     # initiate machine jobs
     order_df['assigned_machine'] = -1
@@ -293,7 +293,7 @@ def schedule_orders(order_df, order_machine_mapping, priority_list, planning_per
         machine_tmp_endtime = pd.Timestamp('NaT').to_pydatetime()
         # iterate over possible machines
         for machine in order_machine_mapping[job]:
-            machine_curr_endtime = compute_machine_job_endtime(order_df, machine_endtime[machine], job, machine_last_job[machine])
+            machine_curr_endtime = compute_job_endtime(order_df, machine_endtime[machine], job, machine_last_job[machine])
             if pd.isnull(machine_tmp_endtime) or machine_curr_endtime < machine_tmp_endtime:
                 machine_tmp_id = machine
                 machine_tmp_endtime = machine_curr_endtime
