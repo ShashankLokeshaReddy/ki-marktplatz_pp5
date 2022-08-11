@@ -49,7 +49,6 @@ def combine_datetime_columns(df, col_name):
     """
     df[col_name] = df[col_name].apply(get_date) + df.iloc[:, df.columns.get_loc(col_name)+1].astype(str)
     df[col_name] = pd.to_datetime(df[col_name], errors='coerce')
-    a = df[col_name]
     return df
 
 def get_orders() -> pd.DataFrame:
@@ -140,13 +139,13 @@ def set_order_status(order_df):
     """
     order_df['status'] = JobStatus.UNKNOWN
     for idx in order_df.index:
-        if not pd.isnull(order_df.loc[idx, 'deadline_start']) and not pd.isnull(order_df.loc[idx, 'deadline_end']):
+        if pd.notnull(order_df.loc[idx, 'deadline_start']) and pd.notnull(order_df.loc[idx, 'deadline_end']):
             order_df.loc[idx, 'status'] = JobStatus.UNPLANNED
-        if not pd.isnull(order_df.loc[idx, 'calculated_start']) and not pd.isnull(order_df.loc[idx, 'calculated_end']):
+        if pd.notnull(order_df.loc[idx, 'calculated_start']) and pd.notnull(order_df.loc[idx, 'calculated_end']):
             order_df.loc[idx, 'status'] = JobStatus.CALCULATED
-        if not pd.isnull(order_df.loc[idx, 'planned_start']) and not pd.isnull(order_df.loc[idx, 'planned_end']):
+        if pd.isnull(order_df.loc[idx, 'planned_start']) and pd.notnull(order_df.loc[idx, 'planned_end']):
             order_df.loc[idx, 'status'] = JobStatus.PLANNED
-        if not pd.isnull(order_df.loc[idx, 'final_start']):
+        if pd.notnull(order_df.loc[idx, 'final_start']):
             order_df.loc[idx, 'status'] = JobStatus.IN_PROGRESS
     # TODO compute final_end for orders in_work, where this is not given (order is finished in future)
     return order_df
@@ -202,12 +201,15 @@ def compute_priority_list(order_df, priority_procedure: PriorityProcedure):
     """
     if priority_procedure == PriorityProcedure.FIRST_COME_FIRST_SERVE:
         order_df['order_release'] = pd.to_datetime(order_df['order_release'])
-        order_df.sort_values(by='order_release')
+        order_df = order_df.sort_values(by='order_release')
         return order_df['job'].tolist()
     elif priority_procedure == PriorityProcedure.SHORTEST_OPERATION_TIME:
-        raise NotImplementedError()
+        order_df = order_df.sort_values(by='machine_time')
+        return order_df['job'].tolist()
     elif priority_procedure == PriorityProcedure.LONGEST_OPERATION_TIME:
-        raise NotImplementedError()
+        order_df = order_df.sort_values(by='machine_time', ascending=False)
+        a = order_df['machine_time']
+        return order_df['job'].tolist()
     else:
         raise Exception("Unknown priority procedure: " + priority_procedure)
 
