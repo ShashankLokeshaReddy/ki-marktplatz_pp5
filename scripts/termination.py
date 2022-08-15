@@ -1,3 +1,5 @@
+import visualization
+
 import datetime
 import os
 import pathlib
@@ -151,8 +153,8 @@ class ShiftModel:
                                  ]
         if shift_model not in self.get_shift_names():
             raise ValueError(
-                f'Object instantiation failed, since "{shift_model}" is not a'
-                + ' supported shift model.')
+                f'Object instantiation failed, since "{shift_model}" is not' +
+                ' a supported shift model.')
         self.shift_model = shift_model
         # Set current shift time to the first hour of the next shift day if it
         # is outside the working hours
@@ -250,9 +252,10 @@ class ShiftModel:
         if temp_interval[1] == datetime.time(0, 0) and weekday == 5:
             # Saturday, no hours for this shift, get monday
             day_skips = 2
-        return datetime.datetime(start.year, start.month, start.day + day_skips,
+        return datetime.datetime(start.year, start.month, start.day,
                                  temp_interval[0].hour,
-                                 temp_interval[0].minute)
+                                 temp_interval[0].minute) + \
+            datetime.timedelta(days=day_skips)
 
 
 def get_orders(path: str = default_database_path) -> pd.DataFrame:
@@ -296,6 +299,7 @@ def get_orders(path: str = default_database_path) -> pd.DataFrame:
                          'Rüstzeit für Coilwechsel',
                          'Maschinen-laufzeit',
                          'Dauer Handarbeit',
+                         'Schichtmodell',
                          'spätester Fertigstellungszeitpunkt',
                          'Spätester Bearbeitungsbeginn',
                          'Berechneter Bearbei-tungsbeginn',
@@ -314,6 +318,7 @@ def get_orders(path: str = default_database_path) -> pd.DataFrame:
                              'Rüstzeit für Coilwechsel': 'setuptime_coil',
                              'Maschinen-laufzeit': 'duration_machine',
                              'Dauer Handarbeit': 'duration_hand',
+                             'Schichtmodell': 'shift_model',
                              'spätester Fertigstellungszeitpunkt': 'deadline',
                              'Spätester Bearbeitungsbeginn':
                                  'latest_start',
@@ -411,9 +416,8 @@ def calculate_timestamps(order_df, start, last_tool):
     """
     Calculates a simple termination from the given orders and returns it.
     """
+    # TODO: Jobs shouldn't be able to start before their order comes in
     machines = order_df['machine'].astype(int).unique()
-    order_df = order_df.assign(starttime=0)
-    order_df = order_df.assign(endtime=0)
     order_df = order_df.assign(setup_time=0)
     # Für jede Maschine
     for machine in machines:
@@ -423,21 +427,28 @@ def calculate_timestamps(order_df, start, last_tool):
         # Entsprechend der Reihenfolge timestamps berechnen
         for index, row in df_machine.iterrows():
             order_num = row['job']
-            if timestamp.hour > 18:  # Nächster Tag
-                timestamp = datetime.datetime(timestamp.year, timestamp.month,
-                                              timestamp.day + 1, 6, 0, 0)
+            shift_model = row['shift_model']
+
+            if timestamp < row['order_release']:
+                timestamp = row['order_release']
+            # Adjust timestamp to next shift start
+            shifts = ShiftModel(timestamp, shift_model)
+            timestamp = shifts.get_earliest_time(timestamp)
+
             order_df.loc[order_df['job'] == order_num,
-                         ['starttime']] = timestamp
+                         ['calculated_start']] = timestamp
             tool = row['tool']
             setup_time = calculate_setup_time(tool, last_tool)
             order_df.loc[order_df['job'] == order_num,
                          ['setup_time']] = setup_time
             prod_time = int(row['duration_machine'])
             runtime = prod_time + setup_time
-            timestamp = timestamp + datetime.timedelta(minutes=runtime)
+            timestamp = calculate_end_time(start=timestamp,
+                                           duration=runtime,
+                                           shift_model=shift_model)
             order_num = row['job']
             order_df.loc[order_df['job'] == order_num,
-                         ['endtime']] = timestamp
+                         ['calculated_end']] = timestamp
             last_tool = tool
     return order_df
 
@@ -491,8 +502,11 @@ def combine_orders(order_df, start):
 # Debugging
 # df = get_orders()
 # print(df)
-# df = calculate_timestamps(df, datetime.datetime(2022, 7, 20, 6, 0, 0), 'A0')
-# print(df)
-# print(df[['job', 'machine', 'starttime', 'endtime', 'setup_time']])
+# df.drop(index=df.index[:180], axis=0, inplace=True)
+# df = calculate_timestamps(df, datetime.datetime(2022, 2, 27, 6, 0, 0), 'A0')
+# print(df[['job', 'machine', 'calculated_start', 'calculated_end', 'setup_time']])
+# visualization.gantt(df)
+
+
 # print(calculate_end_time(start=datetime.datetime(
 #     2022, 4, 15, 0, 0, 0), duration=300, shift_model='FLEX'))
