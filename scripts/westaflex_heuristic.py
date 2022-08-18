@@ -124,6 +124,7 @@ def get_orders() -> pd.DataFrame:
             "Rohrtyp",
             "Werkzeug-nummer",
             "Rüstzeit für WKZ/Materialwechsel",
+            "Rüstzeit für Coilwechsel"
         ]
     ]
     order_df.rename(
@@ -143,6 +144,7 @@ def get_orders() -> pd.DataFrame:
             "Rohrtyp": "tube_type",
             "Werkzeug-nummer": "tool",
             "Rüstzeit für WKZ/Materialwechsel": "setuptime_material",
+            "Rüstzeit für Coilwechsel": "setuptime_coil"
         },
         inplace=True,
     )
@@ -280,7 +282,7 @@ def tool_setup_time(order_df, job, job_prev=""):
         _type_: setup time given in minutes.
     """
     order = order_df.loc[order_df["job"] == job]
-    # if no previous job, return setup time for job
+    # if no previous job exists, return setup time for job
     if not job_prev:
         return order["setuptime_material"].values[0]
     order_prev = order_df.loc[order_df["job"] == job_prev]
@@ -305,14 +307,15 @@ def compute_job_endtime(order_df, starttime, job, prev_job=""):
     Returns:
         _type_: datetime of job ending
     """
-    # TODO Rüstzeit für Coilwechsel included in Rüstzeit für WKZ/Materialwechsel?
-    setuptime_material = tool_setup_time(order_df, job, prev_job)
     order = order_df.loc[order_df["job"] == job]
+    setuptime_material = tool_setup_time(order_df, job, prev_job)
+    setuptime_coil = order["setuptime_coil"].values[0]
     machine_time = order["machine_time"].values[0]
     manual_time = order["manual_time"].values[0]
     endtime = (
         starttime
-        + pd.DateOffset(minutes=setuptime_material)
+        - pd.DateOffset(minutes=setuptime_material)
+        + pd.DateOffset(minutes=setuptime_coil)
         + pd.DateOffset(minutes=machine_time)
         + pd.DateOffset(minutes=manual_time)
     )
