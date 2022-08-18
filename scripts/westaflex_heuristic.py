@@ -152,7 +152,6 @@ def get_orders() -> pd.DataFrame:
     return order_df
 
 
-# TODO filter out jobs marked with "R"
 def filter_orders(order_df, planning_period_start, planning_period_end):
     """Removes orders, which are marked for removal and are scheduled outside of the planning period.
     Orders are outside of the planning period if they are already finished (final_end before planning_period_start) 
@@ -308,13 +307,15 @@ def compute_job_period(shift_model, order_df, start_time, job, prev_job=""):
     Returns:
         _type_: datetime of job ending
     """
+    # TODO correct manual time
     order = order_df.loc[order_df["job"] == job]
     setuptime_material = tool_setup_time(order_df, job, prev_job)
     setuptime_coil = order["setuptime_coil"].values[0]
     machine_time = order["machine_time"].values[0]
     manual_time = order["manual_time"].values[0]
     work_time = machine_time - setuptime_material + setuptime_coil + manual_time
-    return shift_model.compute_work_period(start_time, work_time)
+    (job_period_start, job_period_end) = shift_model.compute_work_period(start_time, work_time)
+    return (job_period_start, job_period_end)
 
 def schedule_orders(
     shift_model,
@@ -336,8 +337,6 @@ def schedule_orders(
     Returns:
         _type_: pandas dataframe of the orders, where all orders within of planning period are planned.
     """
-    # TODO consider end of planning period for jobs during scheduling
-    # TODO include calendar and schichtmodell in computation
     # initiate machine jobs
     order_df["assigned_machine"] = -1
     machine_endtime = {}
@@ -387,18 +386,22 @@ def schedule_orders(
                 machine_tmp_starttime = machine_curr_starttime
                 machine_tmp_endtime = machine_curr_endtime
 
-        order_df.loc[(order_df["job"] == job), "planned_start"] = machine_tmp_starttime
-        order_df.loc[(order_df["job"] == job), "planned_end"] = machine_tmp_endtime
-        order_df.loc[(order_df["job"] == job), "assigned_machine"] = machine_tmp_id
-        machine_endtime[machine_tmp_id] = machine_tmp_endtime
-        machine_last_job[machine_tmp_id] = job
+        # only consider jobs that can finish within the planning period
+        if machine_tmp_endtime < planning_period_end:
+            order_df.loc[(order_df["job"] == job), "calculated_start"] = machine_tmp_starttime
+            order_df.loc[(order_df["job"] == job), "calculated_end"] = machine_tmp_endtime
+            order_df.loc[(order_df["job"] == job), "planned_start"] = machine_tmp_starttime
+            order_df.loc[(order_df["job"] == job), "planned_end"] = machine_tmp_endtime
+            order_df.loc[(order_df["job"] == job), "machine"] = machine_tmp_id
+            machine_endtime[machine_tmp_id] = machine_tmp_endtime
+            machine_last_job[machine_tmp_id] = job
 
     return order_df
 
 
 # scheduling parameters
-planning_period_start = datetime.datetime(2022, 5, 5, 8, 0, 0)  # 05.05.2020 8:00:00
-planning_period_end = datetime.datetime(2022, 5, 12, 8, 0, 0)  # 12.05.22 8:00:00
+planning_period_start = datetime.datetime(2022, 5, 2, 8, 0, 0)  # 05.05.2020 8:00:00
+planning_period_end = datetime.datetime(2022, 5, 8, 23, 59, 59)  # 12.05.22 8:00:00
 priority_procedure = PriorityProcedure.FIRST_COME_FIRST_SERVE
 shift_model_type = 'FLEX'
 
@@ -416,4 +419,8 @@ order_df = schedule_orders(
     planning_period_start,
     planning_period_end,
 )
-print(order_df[["job", "assigned_machine", "planned_start", "planned_end"]])
+
+# filter for planned jobs within the planning period
+order_df = order_df[(pd.notnull(order_df["planned_start"])) & (pd.notnull(order_df["planned_end"]))]
+
+print(order_df[["job", "machine", "planned_start", "planned_end"]])
