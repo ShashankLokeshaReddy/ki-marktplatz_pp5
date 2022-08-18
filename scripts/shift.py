@@ -155,15 +155,13 @@ class ShiftModel:
         res = datetime.time(h, min, sec)
         return res
 
-    def compute_work_period(self, start_time, work_time: float) -> datetime:
-        """_summary_
+    def compute_work_period(self, start_time, work_time: float):
+        """Compute the work period based on the shift model for a given start datetime and a work time.
+        Returns a tuple of the working period begin and end as datetime.
 
         Args:
             start_time (_type_): _description_
             work_time (float): Time for job work time given in minutes as float
-
-        Returns:
-            datetime: _description_
         """
         # Compute earliest actual start time within shift model
         period_start = self.get_earliest_time(start_time)
