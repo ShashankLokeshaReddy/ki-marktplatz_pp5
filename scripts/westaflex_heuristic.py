@@ -307,13 +307,14 @@ def compute_job_period(shift_model, order_df, start_time, job, prev_job=""):
     Returns:
         _type_: datetime of job ending
     """
-    # TODO correct manual time
     order = order_df.loc[order_df["job"] == job]
     setuptime_material = tool_setup_time(order_df, job, prev_job)
     setuptime_coil = order["setuptime_coil"].values[0]
     machine_time = order["machine_time"].values[0]
     manual_time = order["manual_time"].values[0]
-    work_time = machine_time - setuptime_material + setuptime_coil + manual_time
+    if manual_time > machine_time:
+        machine_time = manual_time
+    work_time = machine_time - setuptime_material + setuptime_coil
     (job_period_start, job_period_end) = shift_model.compute_work_period(start_time, work_time)
     return (job_period_start, job_period_end)
 
