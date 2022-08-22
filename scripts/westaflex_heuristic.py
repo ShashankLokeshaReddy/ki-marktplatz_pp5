@@ -4,6 +4,7 @@ import os
 import numpy as np
 import datetime
 from enum import Enum
+from visualization import gantt
 from shift import ShiftModel
 
 # project root path
@@ -132,8 +133,8 @@ def get_orders() -> pd.DataFrame:
         columns={
             "Fertigungsauf-tragsnummer": "job",
             "Auftragseingabe-zeitpunkt": "order_release",
-            "Spätester Bearbeitungsbeginn": "deadline_start",
-            "spätester Fertigstellungszeitpunkt": "deadline_end",
+            "Spätester Bearbeitungsbeginn": "latest_start",
+            "spätester Fertigstellungszeitpunkt": "deadline",
             "Berechneter Bearbei-tungsbeginn": "calculated_start",
             "Berechneter Fertigstellungs-zeitpunkt": "calculated_end",
             "PLAN-Bearbeitungs-beginn": "planned_start",
@@ -187,8 +188,8 @@ def set_order_status(order_df):
     """
     order_df["status"] = JobStatus.UNKNOWN
     for idx in order_df.index:
-        if pd.notnull(order_df.loc[idx, "deadline_start"]) and pd.notnull(
-            order_df.loc[idx, "deadline_end"]
+        if pd.notnull(order_df.loc[idx, "latest_start"]) and pd.notnull(
+            order_df.loc[idx, "deadline"]
         ):
             order_df.loc[idx, "status"] = JobStatus.UNPLANNED
         if pd.notnull(order_df.loc[idx, "calculated_start"]) and pd.notnull(
@@ -424,4 +425,8 @@ order_df = schedule_orders(
 # filter for planned jobs within the planning period
 order_df = order_df[(pd.notnull(order_df["planned_start"])) & (pd.notnull(order_df["planned_end"]))]
 
-print(order_df[["job", "machine", "planned_start", "planned_end"]])
+# visualize orders as gantt chart
+order_df.rename(columns={"setuptime_material": "setup_time"}, inplace=True)
+gantt(order_df)
+
+# print(order_df[["job", "machine", "planned_start", "planned_end"]])
