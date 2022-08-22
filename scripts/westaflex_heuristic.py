@@ -340,7 +340,7 @@ def schedule_orders(
         _type_: pandas dataframe of the orders, where all orders within of planning period are planned.
     """
     # initiate machine jobs
-    order_df["assigned_machine"] = -1
+    order_df["machine"] = -1
     machine_endtime = {}
     machine_last_job = {}
     for machine in (
@@ -402,8 +402,8 @@ def schedule_orders(
 
 
 # scheduling parameters
-planning_period_start = datetime.datetime(2022, 5, 2, 8, 0, 0)  # 05.05.2020 8:00:00
-planning_period_end = datetime.datetime(2022, 5, 8, 23, 59, 59)  # 12.05.22 8:00:00
+planning_period_start = datetime.datetime(2022, 5, 2, 8, 0, 0)  # 02.05.2020 8:00:00
+planning_period_end = datetime.datetime(2022, 5, 8, 23, 59, 59)  # 08.05.22 8:00:00
 priority_procedure = PriorityProcedure.FIRST_COME_FIRST_SERVE
 shift_model_type = 'FLEX'
 
@@ -429,4 +429,9 @@ order_df = order_df[(pd.notnull(order_df["planned_start"])) & (pd.notnull(order_
 order_df.rename(columns={"setuptime_material": "setup_time"}, inplace=True)
 gantt(order_df)
 
-# print(order_df[["job", "machine", "planned_start", "planned_end"]])
+# show machine-specific schedule
+# order_df = order_df[order_df["machine"] == "1531"]
+# order_df = order_df.sort_values(by='planned_start')
+
+# print results to console
+print(order_df[["job", "machine", "planned_start", "planned_end"]])
