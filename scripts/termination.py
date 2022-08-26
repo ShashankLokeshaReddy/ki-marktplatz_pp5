@@ -11,8 +11,9 @@ import pandas as pd
 # Current script directory
 script_directory = pathlib.Path(__file__).parent.resolve()
 # Default path of the order database excel file
-default_database_path = os.path.join(script_directory, '..', 'data',
-                                     "20220706_Auftragsdatenbank.xlsm")
+default_database_path = os.path.join(
+    script_directory, "..", "data", "20220706_Auftragsdatenbank.xlsm"
+)
 
 
 def get_orders(path: str = default_database_path) -> pd.DataFrame:
@@ -38,66 +39,66 @@ def get_orders(path: str = default_database_path) -> pd.DataFrame:
             calculated_start, calculated_end, planned_start, planned_end,
             actual_start, actual_end
     """
-    sheet_name = 'Datenbank_Auftragsdaten'
+    sheet_name = "Datenbank_Auftragsdaten"
     order_df = pd.read_excel(path, sheet_name)  # Read file
     order_df = order_df.rename(columns=order_df.iloc[10])
     # Name first column to reference it for deletion
-    order_df = order_df.rename(columns={order_df.columns[0]: 'Nichts'})
-    order_df = order_df.drop('Nichts', axis=1)
+    order_df = order_df.rename(columns={order_df.columns[0]: "Nichts"})
+    order_df = order_df.drop("Nichts", axis=1)
     # Ignore first 14 rows since data starts at row 15
     order_df = order_df.drop(np.arange(13))
     order_df = order_df.reset_index(drop=True)
-    order_df = order_df[['Fertigungsauf-tragsnummer',
-                         'Artikelnummer',
-                         'Auftragseingabe-zeitpunkt',
-                         'Nummer Wickel-rohrmaschine',
-                         'Werkzeug-nummer',
-                         'Rüstzeit für WKZ/Materialwechsel',
-                         'Rüstzeit für Coilwechsel',
-                         'Maschinen-laufzeit',
-                         'Dauer Handarbeit',
-                         'Schichtmodell',
-                         'spätester Fertigstellungszeitpunkt',
-                         'Spätester Bearbeitungsbeginn',
-                         'Berechneter Bearbei-tungsbeginn',
-                         'Berechneter Fertigstellungs-zeitpunkt',
-                         'PLAN-Bearbeitungs-beginn',
-                         'PLAN-Fertigstellungs-zeitpunkt',
-                         'IST- Bearbeitungs-beginn',
-                         'IST-Fertigstellungs-zeitpunkt']]
-    order_df.rename(columns={'Fertigungsauf-tragsnummer': 'job',
-                             'Artikelnummer': 'item',
-                             'Auftragseingabe-zeitpunkt': 'order_release',
-                             'Nummer Wickel-rohrmaschine': 'machine',
-                             'Werkzeug-nummer': 'tool',
-                             'Rüstzeit für WKZ/Materialwechsel':
-                                 'setuptime_material',
-                             'Rüstzeit für Coilwechsel': 'setuptime_coil',
-                             'Maschinen-laufzeit': 'duration_machine',
-                             'Dauer Handarbeit': 'duration_hand',
-                             'Schichtmodell': 'shift_model',
-                             'spätester Fertigstellungszeitpunkt': 'deadline',
-                             'Spätester Bearbeitungsbeginn':
-                                 'latest_start',
-                             'Berechneter Bearbei-tungsbeginn':
-                                 'calculated_start',
-                             'Berechneter Fertigstellungs-zeitpunkt':
-                                 'calculated_end',
-                             'PLAN-Bearbeitungs-beginn':
-                                 'planned_start',
-                             'PLAN-Fertigstellungs-zeitpunkt':
-                                 'planned_end',
-                             'IST- Bearbeitungs-beginn':
-                                 'actual_start',
-                             'IST-Fertigstellungs-zeitpunkt':
-                                 'actual_end'},
-                    inplace=True)
+    order_df = order_df[
+        [
+            "Fertigungsauf-tragsnummer",
+            "Artikelnummer",
+            "Auftragseingabe-zeitpunkt",
+            "Nummer Wickel-rohrmaschine",
+            "Werkzeug-nummer",
+            "Rüstzeit für WKZ/Materialwechsel",
+            "Rüstzeit für Coilwechsel",
+            "Maschinen-laufzeit",
+            "Dauer Handarbeit",
+            "Schichtmodell",
+            "spätester Fertigstellungszeitpunkt",
+            "Spätester Bearbeitungsbeginn",
+            "Berechneter Bearbei-tungsbeginn",
+            "Berechneter Fertigstellungs-zeitpunkt",
+            "PLAN-Bearbeitungs-beginn",
+            "PLAN-Fertigstellungs-zeitpunkt",
+            "IST- Bearbeitungs-beginn",
+            "IST-Fertigstellungs-zeitpunkt",
+        ]
+    ]
+    order_df.rename(
+        columns={
+            "Fertigungsauf-tragsnummer": "job",
+            "Artikelnummer": "item",
+            "Auftragseingabe-zeitpunkt": "order_release",
+            "Nummer Wickel-rohrmaschine": "machine",
+            "Werkzeug-nummer": "tool",
+            "Rüstzeit für WKZ/Materialwechsel": "setuptime_material",
+            "Rüstzeit für Coilwechsel": "setuptime_coil",
+            "Maschinen-laufzeit": "duration_machine",
+            "Dauer Handarbeit": "duration_hand",
+            "Schichtmodell": "shift_model",
+            "spätester Fertigstellungszeitpunkt": "deadline",
+            "Spätester Bearbeitungsbeginn": "latest_start",
+            "Berechneter Bearbei-tungsbeginn": "calculated_start",
+            "Berechneter Fertigstellungs-zeitpunkt": "calculated_end",
+            "PLAN-Bearbeitungs-beginn": "planned_start",
+            "PLAN-Fertigstellungs-zeitpunkt": "planned_end",
+            "IST- Bearbeitungs-beginn": "actual_start",
+            "IST-Fertigstellungs-zeitpunkt": "actual_end",
+        },
+        inplace=True,
+    )
     return order_df
 
 
-def calculate_end_time(start: datetime.datetime,
-                       duration: int,
-                       shift_model: str) -> datetime.datetime:
+def calculate_end_time(
+    start: datetime.datetime, duration: int, shift_model: str
+) -> datetime.datetime:
     """
     Calculates the time a job gets finished based on the given duration.
 
@@ -127,7 +128,8 @@ def calculate_end_time(start: datetime.datetime,
         pass
     else:
         raise ValueError(
-            'start parameter needs to be of type datetime.datetime or pandas.Timestamp')
+            "start parameter needs to be of type datetime.datetime or pandas.Timestamp"
+        )
 
     shifts = ShiftModel(start, shift_model)
     # Add the duration of the job to the current shift time
@@ -160,7 +162,7 @@ def calculate_setup_time(tool1: str, tool2: str) -> int:
     tool1 = str(tool1)
     tool2 = str(tool2)
     # Remove whitespaces and make case insensitive comparison
-    if tool1.casefold().replace(' ', '') == tool2.casefold().replace(' ', ''):
+    if tool1.casefold().replace(" ", "") == tool2.casefold().replace(" ", ""):
         setup_time = 0
     else:
         setup_time = 15
@@ -174,38 +176,34 @@ def calculate_timestamps(order_df, start, last_tool):
     Calculates a simple termination from the given orders and returns it.
     """
     # TODO: Jobs shouldn't be able to start before their order comes in
-    machines = order_df['machine'].astype(int).unique()
+    machines = order_df["machine"].astype(int).unique()
     order_df = order_df.assign(setup_time=0)
     # Für jede Maschine
     for machine in machines:
-        df_machine = order_df[
-            order_df['machine'].astype(int) == machine]
+        df_machine = order_df[order_df["machine"].astype(int) == machine]
         timestamp = start
         # Entsprechend der Reihenfolge timestamps berechnen
         for index, row in df_machine.iterrows():
-            order_num = row['job']
-            shift_model = row['shift_model']
+            order_num = row["job"]
+            shift_model = row["shift_model"]
 
-            if timestamp < row['order_release']:
-                timestamp = row['order_release']
+            if timestamp < row["order_release"]:
+                timestamp = row["order_release"]
             # Adjust timestamp to next shift start
             shifts = ShiftModel(timestamp, shift_model)
             timestamp = shifts.get_earliest_time(timestamp)
 
-            order_df.loc[order_df['job'] == order_num,
-                         ['calculated_start']] = timestamp
-            tool = row['tool']
+            order_df.loc[order_df["job"] == order_num, ["calculated_start"]] = timestamp
+            tool = row["tool"]
             setup_time = calculate_setup_time(tool, last_tool)
-            order_df.loc[order_df['job'] == order_num,
-                         ['setup_time']] = setup_time
-            prod_time = int(row['duration_machine'])
+            order_df.loc[order_df["job"] == order_num, ["setup_time"]] = setup_time
+            prod_time = int(row["duration_machine"])
             runtime = prod_time + setup_time
-            timestamp = calculate_end_time(start=timestamp,
-                                           duration=runtime,
-                                           shift_model=shift_model)
-            order_num = row['job']
-            order_df.loc[order_df['job'] == order_num,
-                         ['calculated_end']] = timestamp
+            timestamp = calculate_end_time(
+                start=timestamp, duration=runtime, shift_model=shift_model
+            )
+            order_num = row["job"]
+            order_df.loc[order_df["job"] == order_num, ["calculated_end"]] = timestamp
             last_tool = tool
     return order_df
 
@@ -216,16 +214,16 @@ def _convert_date_to_datetime(date: str) -> datetime.datetime:
     """
     if not isinstance(date, str):
         return datetime.datetime(0, 0, 0)
-    if not date or date.lower() == 'nan':
+    if not date or date.lower() == "nan":
         return datetime.datetime(0, 0, 0)
-    if not date.count('.') == 2 or len(date) != 10:
-        raise ValueError(f'{date} not expected format dd.mm.yyyy')
+    if not date.count(".") == 2 or len(date) != 10:
+        raise ValueError(f"{date} not expected format dd.mm.yyyy")
     # Turn date around to yyyy-mm-dd first
-    date = date.split('.')
+    date = date.split(".")
     if len(date[0]) == 4:
         # In format yyyy.mm.dd, so reverse list
         date.reverse()
-    swapped_date = date[2] + '-' + date[1] + '-' + date[0]
+    swapped_date = date[2] + "-" + date[1] + "-" + date[0]
     return datetime.datetime.fromisoformat(swapped_date)
 
 
@@ -237,21 +235,28 @@ def combine_orders(order_df, start):
     new_df = pd.DataFrame()
     start_week = start.isocalendar()[1]
     # Add all orders that have no start yet
-    new_df.append(order_df[order_df['actual_start'].isnull()])
+    new_df.append(order_df[order_df["actual_start"].isnull()])
     # Add all orders that did not start before the planing week
     # TODO: Find way to convert string to datetime in row selection
-    if not order_df[order_df['actual_start'].isnull()].empty:
-        new_df.append(order_df[
-            order_df['actual_start'].apply(_convert_date_to_datetime) > start])
+    if not order_df[order_df["actual_start"].isnull()].empty:
+        new_df.append(
+            order_df[order_df["actual_start"].apply(_convert_date_to_datetime) > start]
+        )
     # Add all orders that have their latest start in the planing week
     new_df.append(
-        order_df[_convert_date_to_datetime(
-            order_df['latest_start']).isocalendar()[1] == start_week])
+        order_df[
+            _convert_date_to_datetime(order_df["latest_start"]).isocalendar()[1]
+            == start_week
+        ]
+    )
     # Add all orders that are currently running
     new_df.append(
-        order_df[_convert_date_to_datetime(
-            order_df['actual_start']) < start & _convert_date_to_datetime(
-            order_df['actual_end']) > start])
+        order_df[
+            _convert_date_to_datetime(order_df["actual_start"])
+            < start & _convert_date_to_datetime(order_df["actual_end"])
+            > start
+        ]
+    )
 
     return new_df
 

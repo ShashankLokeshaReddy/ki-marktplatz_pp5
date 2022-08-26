@@ -126,7 +126,7 @@ def get_orders() -> pd.DataFrame:
             "Rohrtyp",
             "Werkzeug-nummer",
             "Rüstzeit für WKZ/Materialwechsel",
-            "Rüstzeit für Coilwechsel"
+            "Rüstzeit für Coilwechsel",
         ]
     ]
     order_df.rename(
@@ -146,7 +146,7 @@ def get_orders() -> pd.DataFrame:
             "Rohrtyp": "tube_type",
             "Werkzeug-nummer": "tool",
             "Rüstzeit für WKZ/Materialwechsel": "setuptime_material",
-            "Rüstzeit für Coilwechsel": "setuptime_coil"
+            "Rüstzeit für Coilwechsel": "setuptime_coil",
         },
         inplace=True,
     )
@@ -155,7 +155,7 @@ def get_orders() -> pd.DataFrame:
 
 def filter_orders(order_df, planning_period_start, planning_period_end):
     """Removes orders, which are marked for removal and are scheduled outside of the planning period.
-    Orders are outside of the planning period if they are already finished (final_end before planning_period_start) 
+    Orders are outside of the planning period if they are already finished (final_end before planning_period_start)
     or if they are planned after the planning period (planning_start after planning_period_end)
 
     Args:
@@ -316,8 +316,11 @@ def compute_job_period(shift_model, order_df, start_time, job, prev_job=""):
     if manual_time > machine_time:
         machine_time = manual_time
     work_time = machine_time - setuptime_material + setuptime_coil
-    (job_period_start, job_period_end) = shift_model.compute_work_period(start_time, work_time)
+    (job_period_start, job_period_end) = shift_model.compute_work_period(
+        start_time, work_time
+    )
     return (job_period_start, job_period_end)
+
 
 def schedule_orders(
     shift_model,
@@ -378,7 +381,11 @@ def schedule_orders(
         # iterate over possible machines
         for machine in order_machine_mapping[job]:
             (machine_curr_starttime, machine_curr_endtime) = compute_job_period(
-                shift_model, order_df, machine_endtime[machine], job, machine_last_job[machine]
+                shift_model,
+                order_df,
+                machine_endtime[machine],
+                job,
+                machine_last_job[machine],
             )
             if (
                 pd.isnull(machine_tmp_endtime)
@@ -390,9 +397,15 @@ def schedule_orders(
 
         # only consider jobs that can finish within the planning period
         if machine_tmp_endtime < planning_period_end:
-            order_df.loc[(order_df["job"] == job), "calculated_start"] = machine_tmp_starttime
-            order_df.loc[(order_df["job"] == job), "calculated_end"] = machine_tmp_endtime
-            order_df.loc[(order_df["job"] == job), "planned_start"] = machine_tmp_starttime
+            order_df.loc[
+                (order_df["job"] == job), "calculated_start"
+            ] = machine_tmp_starttime
+            order_df.loc[
+                (order_df["job"] == job), "calculated_end"
+            ] = machine_tmp_endtime
+            order_df.loc[
+                (order_df["job"] == job), "planned_start"
+            ] = machine_tmp_starttime
             order_df.loc[(order_df["job"] == job), "planned_end"] = machine_tmp_endtime
             order_df.loc[(order_df["job"] == job), "machine"] = machine_tmp_id
             machine_endtime[machine_tmp_id] = machine_tmp_endtime
@@ -405,7 +418,7 @@ def schedule_orders(
 planning_period_start = datetime.datetime(2022, 5, 2, 8, 0, 0)  # 02.05.2020 8:00:00
 planning_period_end = datetime.datetime(2022, 5, 8, 23, 59, 59)  # 08.05.22 8:00:00
 priority_procedure = PriorityProcedure.FIRST_COME_FIRST_SERVE
-shift_model_type = 'FLEX'
+shift_model_type = "FLEX"
 
 shift_model = ShiftModel(planning_period_start, shift_model_type)
 order_df = get_orders()
@@ -423,7 +436,9 @@ order_df = schedule_orders(
 )
 
 # filter for planned jobs within the planning period
-order_df = order_df[(pd.notnull(order_df["planned_start"])) & (pd.notnull(order_df["planned_end"]))]
+order_df = order_df[
+    (pd.notnull(order_df["planned_start"])) & (pd.notnull(order_df["planned_end"]))
+]
 
 # visualize orders as gantt chart
 order_df.rename(columns={"setuptime_material": "setup_time"}, inplace=True)
