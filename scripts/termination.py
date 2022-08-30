@@ -1,4 +1,5 @@
 import visualization
+import pyomomachsched
 
 import datetime
 import os
@@ -188,8 +189,13 @@ class ShiftModel:
                 # Check if current time is actually during a shift timeframe
                 self.current_shift_time = self.get_earliest_time(
                     self.current_shift_time)
+                shift_end = datetime.datetime.combine(self.current_shift_time.date(),
+                                                      interval[1])
+                if self.current_shift_time > shift_end:
+                    # Current shift time does not lie in current interval
+                    continue
                 # Minutes during this interval
-                interval_minutes = (datetime.datetime.combine(self.current_shift_time.date(), interval[1]) -
+                interval_minutes = (shift_end -
                                     self.current_shift_time).total_seconds() / 60
                 if working_time >= interval_minutes:
                     # Whole interval can be worked through
@@ -202,6 +208,7 @@ class ShiftModel:
                     self.current_shift_time += datetime.timedelta(
                         minutes=working_time)
                     working_time = 0
+                if not working_time:
                     break
         return self.current_shift_time
 
@@ -231,7 +238,8 @@ class ShiftModel:
         """
         # Skip as many days as there are holidays
         while start.date() in self.company_holidays:
-            start = start + datetime.timedelta(days=1)
+            start = start.replace(hour=0, minute=0) + \
+                datetime.timedelta(days=1)
         weekday = start.weekday()
         # Iterate through all time intervals of the day and check whether
         # the start time lies in one of those intervals
@@ -252,10 +260,15 @@ class ShiftModel:
         if temp_interval[1] == datetime.time(0, 0) and weekday == 5:
             # Saturday, no hours for this shift, get monday
             day_skips = 2
-        return datetime.datetime(start.year, start.month, start.day,
-                                 temp_interval[0].hour,
-                                 temp_interval[0].minute) + \
+        start = datetime.datetime(start.year, start.month, start.day,
+                                  temp_interval[0].hour,
+                                  temp_interval[0].minute) + \
             datetime.timedelta(days=day_skips)
+        if start.date() in self.company_holidays:
+            # New date lies on holiday, calculate new date
+            return self.get_earliest_time(start)
+        else:
+            return start
 
 
 def get_orders(path: str = default_database_path) -> pd.DataFrame:
@@ -282,6 +295,7 @@ def get_orders(path: str = default_database_path) -> pd.DataFrame:
             actual_start, actual_end
     """
     sheet_name = 'Datenbank_Auftragsdaten'
+    # TODO:
     order_df = pd.read_excel(path, sheet_name)  # Read file
     order_df = order_df.rename(columns=order_df.iloc[10])
     # Name first column to reference it for deletion
@@ -412,11 +426,29 @@ def calculate_setup_time(tool1: str, tool2: str) -> int:
 
 # TODO: Rüstzeit erste Maschine?
 # TODO: Startzeit current time?
-def calculate_timestamps(order_df, start, last_tool):
+def naive_termination(order_df, start, last_tool):
     """
     Calculates a simple termination from the given orders and returns it.
+
+    Parameters
+    ----------
+    order_df: dataframe
+        Orders in a dataframe containing the columns:
+            machine, job, shift_model, order_release, duration_machine,
+            setup_time
+        Overwrites the values of following columns:
+            calculated_start, calculated_end.
+    start: datetime
+        The start time of the naive termination calculation.
+    last_tool: str
+        The last tool name that has been used in the last job before the
+        termination.
+
+    Returns
+    -------
+    dataframe
+        The orders with overwritten calculated_start and calculated_end.
     """
-    # TODO: Jobs shouldn't be able to start before their order comes in
     machines = order_df['machine'].astype(int).unique()
     order_df = order_df.assign(setup_time=0)
     # Für jede Maschine
@@ -429,6 +461,7 @@ def calculate_timestamps(order_df, start, last_tool):
             order_num = row['job']
             shift_model = row['shift_model']
 
+            # TODO: What about already running jobs? Or jobs that are finished?
             if timestamp < row['order_release']:
                 timestamp = row['order_release']
             # Adjust timestamp to next shift start
@@ -503,10 +536,11 @@ def combine_orders(order_df, start):
 # df = get_orders()
 # print(df)
 # df.drop(index=df.index[:180], axis=0, inplace=True)
-# df = calculate_timestamps(df, datetime.datetime(2022, 2, 27, 6, 0, 0), 'A0')
-# print(df[['job', 'machine', 'calculated_start', 'calculated_end', 'setup_time']])
+# df = naive_termination(df, datetime.datetime(2022, 2, 27, 6, 0, 0), 'A0')
+# print(df[['order_release', 'machine', 'shift_model', 'duration_machine',
+#       'calculated_start', 'calculated_end', 'setup_time']])
 # visualization.gantt(df)
 
 
 # print(calculate_end_time(start=datetime.datetime(
-#     2022, 4, 15, 0, 0, 0), duration=300, shift_model='FLEX'))
+#     2022, 4, 14, 14, 0, 0), duration=450, shift_model='FLEX'))
