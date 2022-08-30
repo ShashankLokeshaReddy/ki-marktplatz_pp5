@@ -1,5 +1,6 @@
 from scripts.shift import ShiftModel
 import visualization
+import pyomomachsched
 
 import datetime
 import os
@@ -11,9 +12,8 @@ import pandas as pd
 # Current script directory
 script_directory = pathlib.Path(__file__).parent.resolve()
 # Default path of the order database excel file
-default_database_path = os.path.join(
-    script_directory, "..", "data", "20220706_Auftragsdatenbank.xlsm"
-)
+default_database_path = os.path.join(script_directory, '..', 'data',
+                                     "20220706_Auftragsdatenbank.xlsm")
 
 
 def get_orders(path: str = default_database_path) -> pd.DataFrame:
@@ -39,7 +39,8 @@ def get_orders(path: str = default_database_path) -> pd.DataFrame:
             calculated_start, calculated_end, planned_start, planned_end,
             actual_start, actual_end
     """
-    sheet_name = "Datenbank_Auftragsdaten"
+    sheet_name = 'Datenbank_Auftragsdaten'
+    # TODO:
     order_df = pd.read_excel(path, sheet_name)  # Read file
     order_df = order_df.rename(columns=order_df.iloc[10])
     # Name first column to reference it for deletion
@@ -171,12 +172,30 @@ def calculate_setup_time(tool1: str, tool2: str) -> int:
 
 # TODO: Rüstzeit erste Maschine?
 # TODO: Startzeit current time?
-def calculate_timestamps(order_df, start, last_tool):
+def naive_termination(order_df, start, last_tool):
     """
     Calculates a simple termination from the given orders and returns it.
+
+    Parameters
+    ----------
+    order_df: dataframe
+        Orders in a dataframe containing the columns:
+            machine, job, shift_model, order_release, duration_machine,
+            setup_time
+        Overwrites the values of following columns:
+            calculated_start, calculated_end.
+    start: datetime
+        The start time of the naive termination calculation.
+    last_tool: str
+        The last tool name that has been used in the last job before the
+        termination.
+
+    Returns
+    -------
+    dataframe
+        The orders with overwritten calculated_start and calculated_end.
     """
-    # TODO: Jobs shouldn't be able to start before their order comes in
-    machines = order_df["machine"].astype(int).unique()
+    machines = order_df['machine'].astype(int).unique()
     order_df = order_df.assign(setup_time=0)
     # Für jede Maschine
     for machine in machines:
@@ -187,8 +206,9 @@ def calculate_timestamps(order_df, start, last_tool):
             order_num = row["job"]
             shift_model = row["shift_model"]
 
-            if timestamp < row["order_release"]:
-                timestamp = row["order_release"]
+            # TODO: What about already running jobs? Or jobs that are finished?
+            if timestamp < row['order_release']:
+                timestamp = row['order_release']
             # Adjust timestamp to next shift start
             shifts = ShiftModel(timestamp, shift_model)
             timestamp = shifts.get_earliest_time(timestamp)
@@ -265,10 +285,11 @@ def combine_orders(order_df, start):
 # df = get_orders()
 # print(df)
 # df.drop(index=df.index[:180], axis=0, inplace=True)
-# df = calculate_timestamps(df, datetime.datetime(2022, 2, 27, 6, 0, 0), 'A0')
-# print(df[['job', 'machine', 'calculated_start', 'calculated_end', 'setup_time']])
+# df = naive_termination(df, datetime.datetime(2022, 2, 27, 6, 0, 0), 'A0')
+# print(df[['order_release', 'machine', 'shift_model', 'duration_machine',
+#       'calculated_start', 'calculated_end', 'setup_time']])
 # visualization.gantt(df)
 
 
 # print(calculate_end_time(start=datetime.datetime(
-#     2022, 4, 15, 0, 0, 0), duration=300, shift_model='FLEX'))
+#     2022, 4, 14, 14, 0, 0), duration=450, shift_model='FLEX'))
