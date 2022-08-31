@@ -313,9 +313,14 @@ def compute_job_period(shift_model, order_df, start_time, job, prev_job=""):
     setuptime_coil = order["setuptime_coil"].values[0]
     machine_time = order["machine_time"].values[0]
     manual_time = order["manual_time"].values[0]
-    if manual_time > machine_time:
-        machine_time = manual_time
-    work_time = machine_time - setuptime_material + setuptime_coil
+    
+    # compute work time
+    machine_time = machine_time - setuptime_material
+    if machine_time > manual_time:
+        work_time = setuptime_coil + setuptime_material + machine_time
+    else:
+        work_time = setuptime_coil + setuptime_material + manual_time
+
     (job_period_start, job_period_end) = shift_model.compute_work_period(
         start_time, work_time
     )
@@ -415,8 +420,8 @@ def schedule_orders(
 
 
 # scheduling parameters
-planning_period_start = datetime.datetime(2022, 5, 2, 8, 0, 0)  # 02.05.2020 8:00:00
-planning_period_end = datetime.datetime(2022, 5, 8, 23, 59, 59)  # 08.05.22 8:00:00
+planning_period_start = datetime.datetime(2022, 5, 2, 8, 0, 0)  # 02.05.2020 0:00:00
+planning_period_end = datetime.datetime(2022, 5, 8, 23, 59, 59)  # 08.05.22 23:59:59
 priority_procedure = PriorityProcedure.FIRST_COME_FIRST_SERVE
 shift_model_type = "FLEX"
 
@@ -441,12 +446,13 @@ order_df = order_df[
 ]
 
 # visualize orders as gantt chart
-order_df.rename(columns={"setuptime_material": "setup_time"}, inplace=True)
-gantt(order_df)
+#order_df.rename(columns={"setuptime_material": "setup_time"}, inplace=True)
+#gantt(order_df)
 
 # show machine-specific schedule
-# order_df = order_df[order_df["machine"] == "1531"]
-# order_df = order_df.sort_values(by='planned_start')
+order_df = order_df[order_df["machine"] == "1534"]
+order_df = order_df.sort_values(by='planned_start')
+order_df = order_df.reset_index(drop=True)
 
 # print results to console
 print(order_df[["job", "machine", "planned_start", "planned_end"]])
