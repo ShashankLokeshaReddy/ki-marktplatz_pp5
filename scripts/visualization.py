@@ -138,5 +138,6 @@ def gantt(order_df):
     plt.yticks(range(len(machines)), machines)
     plt.ylabel('Machines')
     plt.grid(axis='x')
-    adjust_text(texts, only_move={'texts': 'y'})
+    # TODO readd function when problem with large database is solved
+    # adjust_text(texts, only_move={'texts': 'y'})
     plt.show()
