@@ -44,31 +44,44 @@ company_holidays = [
 
 
 def gantt(order_df):
-    """Visualize the order table as a Gantt chart as a job and a machine chart.
-    """
+    """Visualize the order table as a Gantt chart as a job and a machine chart."""
     bw = 0.3
     fig, axs = plt.subplots(figsize=(12, 0.7 * order_df.shape[0]))
     idx = 0
     for index, row in order_df.iterrows():
-        x = row['order_release']
-        y = row['deadline']
-        axs.fill_between([x, y], [idx - bw / 4, idx - bw / 4],
-                         [idx + bw / 4, idx + bw / 4], color=ai_marketplace_green,
-                         alpha=0.6, linewidth=0, edgecolor='black')
-        x = row['calculated_start']
-        y = row['calculated_end']
-        axs.fill_between([x, y], [idx - bw / 2, idx - bw / 2],
-                         [idx + bw / 2, idx + bw / 2],
-                         color=ai_marketplace_blue_green, alpha=0.8,
-                         linewidth=0)
+        x = row["order_release"]
+        y = row["deadline"]
+        axs.fill_between(
+            [x, y],
+            [idx - bw / 4, idx - bw / 4],
+            [idx + bw / 4, idx + bw / 4],
+            color=ai_marketplace_green,
+            alpha=0.6,
+            linewidth=0,
+            edgecolor="black",
+        )
+        x = row["calculated_start"]
+        y = row["calculated_end"]
+        axs.fill_between(
+            [x, y],
+            [idx - bw / 2, idx - bw / 2],
+            [idx + bw / 2, idx + bw / 2],
+            color=ai_marketplace_blue_green,
+            alpha=0.8,
+            linewidth=0,
+        )
         # Color missed deadline in red
-        if y > row['deadline']:
-            x_missed = row['calculated_end']
-            y_missed = row['deadline']
-            axs.fill_between([x_missed, y_missed], [idx - bw / 2, idx - bw / 2],
-                             [idx + bw / 2, idx + bw / 2],
-                             color='red', alpha=0.8,
-                             linewidth=0)
+        if y > row["deadline"]:
+            x_missed = row["calculated_end"]
+            y_missed = row["deadline"]
+            axs.fill_between(
+                [x_missed, y_missed],
+                [idx - bw / 2, idx - bw / 2],
+                [idx + bw / 2, idx + bw / 2],
+                color="red",
+                alpha=0.8,
+                linewidth=0,
+            )
         # Setup time in yellow
         y = x + datetime.timedelta(minutes=row["setup_time"])
         axs.fill_between(
@@ -120,24 +133,39 @@ def gantt(order_df):
     plt.figure(figsize=(12, 5))
     texts = []
     for index, row in order_df.iterrows():
-        idx = machines.index(str(row['machine']))
-        x = row['calculated_start']
-        y = row['calculated_end']
-        plt.fill_between([x, y], [idx - bw / 2, idx - bw / 2],
-                         [idx + bw / 2, idx + bw / 2],
-                         color=ai_marketplace_blue_green, alpha=0.8)
-        plt.plot([x, y, y, x, x], [idx - bw / 2, idx - bw / 2,
-                                   idx + bw / 2, idx + bw / 2, idx - bw / 2],
-                 color='k', linewidth=1)
-        texts.append(plt.text(row['calculated_start'], idx + 0.25,
-                              'Job ' + str(row['job']), color='black', weight='bold',
-                              horizontalalignment='left', verticalalignment='bottom'))
+        idx = machines.index(str(row["machine"]))
+        x = row["calculated_start"]
+        y = row["calculated_end"]
+        plt.fill_between(
+            [x, y],
+            [idx - bw / 2, idx - bw / 2],
+            [idx + bw / 2, idx + bw / 2],
+            color=ai_marketplace_blue_green,
+            alpha=0.8,
+        )
+        plt.plot(
+            [x, y, y, x, x],
+            [idx - bw / 2, idx - bw / 2, idx + bw / 2, idx + bw / 2, idx - bw / 2],
+            color="k",
+            linewidth=1,
+        )
+        texts.append(
+            plt.text(
+                row["calculated_start"],
+                idx + 0.25,
+                "Job " + str(row["job"]),
+                color="black",
+                weight="bold",
+                horizontalalignment="left",
+                verticalalignment="bottom",
+            )
+        )
     plt.xlim(xlim)
     plt.ylim(-0.5, len(machines) - 0.5)
     plt.title("Machine Schedule")
     plt.yticks(range(len(machines)), machines)
-    plt.ylabel('Machines')
-    plt.grid(axis='x')
+    plt.ylabel("Machines")
+    plt.grid(axis="x")
     # TODO readd function when problem with large database is solved
     # adjust_text(texts, only_move={'texts': 'y'})
     plt.show()

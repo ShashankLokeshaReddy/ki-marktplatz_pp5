@@ -12,8 +12,9 @@ import pandas as pd
 # Current script directory
 script_directory = pathlib.Path(__file__).parent.resolve()
 # Default path of the order database excel file
-default_database_path = os.path.join(script_directory, '..', 'data',
-                                     "20220706_Auftragsdatenbank.xlsm")
+default_database_path = os.path.join(
+    script_directory, "..", "data", "20220706_Auftragsdatenbank.xlsm"
+)
 
 
 def get_orders(path: str = default_database_path) -> pd.DataFrame:
@@ -39,7 +40,7 @@ def get_orders(path: str = default_database_path) -> pd.DataFrame:
             calculated_start, calculated_end, planned_start, planned_end,
             actual_start, actual_end
     """
-    sheet_name = 'Datenbank_Auftragsdaten'
+    sheet_name = "Datenbank_Auftragsdaten"
     # TODO:
     order_df = pd.read_excel(path, sheet_name)  # Read file
     order_df = order_df.rename(columns=order_df.iloc[10])
@@ -195,7 +196,7 @@ def naive_termination(order_df, start, last_tool):
     dataframe
         The orders with overwritten calculated_start and calculated_end.
     """
-    machines = order_df['machine'].astype(int).unique()
+    machines = order_df["machine"].astype(int).unique()
     order_df = order_df.assign(setup_time=0)
     # Für jede Maschine
     for machine in machines:
@@ -207,8 +208,8 @@ def naive_termination(order_df, start, last_tool):
             shift_model = row["shift_model"]
 
             # TODO: What about already running jobs? Or jobs that are finished?
-            if timestamp < row['order_release']:
-                timestamp = row['order_release']
+            if timestamp < row["order_release"]:
+                timestamp = row["order_release"]
             # Adjust timestamp to next shift start
             shifts = ShiftModel(timestamp, shift_model)
             timestamp = shifts.get_earliest_time(timestamp)
