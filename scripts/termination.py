@@ -152,14 +152,63 @@ class ShiftModel:
                                  datetime.date(2022, 12, 30),
                                  datetime.date(2022, 12, 31),
                                  ]
-        if shift_model not in self.get_shift_names():
+        if shift_model.lower() not in [i.lower() for i in self.get_shift_names()]:
             raise ValueError(
                 f'Object instantiation failed, since "{shift_model}" is not' +
                 ' a supported shift model.')
-        self.shift_model = shift_model
+        self.shift_model = shift_model.upper()
         # Set current shift time to the first hour of the next shift day if it
         # is outside the working hours
         self.current_shift_time = self.get_earliest_time(current_shift_time)
+
+    def count_time(self, start: datetime.datetime, end: datetime.datetime) -> int:
+        """Counts the amount of seconds of the shift in the given interval
+        and returns it.
+
+        Parameters
+        ----------
+        start : datetime.datetime
+            Start of the interval where counting starts.
+        end : datetime.datetime
+            End of the interval where counting ends.
+
+        Returns
+        -------
+        int
+            Amount of seconds the shift has during the given interval.
+        """
+        accumulated_seconds = 0
+        current_time = start
+        while current_time != end:
+            # Check if current time is actually during a shift timeframe
+            current_time = self.get_earliest_time(
+                current_time)
+            day_shift = self.shifts[self.shift_model][current_time.weekday(
+            )]
+            for interval in day_shift:
+                # Check if current time is actually during a shift timeframe
+                current_time = self.get_earliest_time(
+                    current_time)
+                shift_end = datetime.datetime.combine(current_time.date(),
+                                                      interval[1])
+                if current_time > shift_end:
+                    # Current shift time does not lie in current interval
+                    continue
+
+                if end >= shift_end:
+                    # Whole interval can be worked through
+                    # Add all seeconds during this interval
+                    accumulated_seconds += (shift_end -
+                                            current_time).total_seconds()
+                    current_time = current_time.replace(
+                        hour=interval[1].hour,
+                        minute=interval[1].minute)
+                else:
+                    # Work stops during current interval
+                    accumulated_seconds += (end - current_time).total_seconds()
+                    current_time = end
+                    break
+        return accumulated_seconds
 
     def add_time(self, working_time: int) -> datetime.datetime:
         """Add working time to the current_shift_time and return the new time.
@@ -271,6 +320,37 @@ class ShiftModel:
             return start
 
 
+def get_date(datetime_object):
+    """Extracts the date from a datetime object as a string.
+
+    Args:
+        datetime_object (_type_): The datetime object that contains the date
+
+    Returns:
+        _type_: A string, which contains the date
+    """
+    return str(datetime_object)[:11]
+
+
+def combine_datetime_columns(df, col_name):
+    """Combines two columns into one datetime column, where one column contains the date and one column contains the time.
+    The date column is assumed to be in the col_name column and time is in the directly following column.
+    The result will be stored in the col_name column.
+
+    Args:
+        df (_type_): A pandas dataframe containing the orders
+        col_name (_type_): the selected column for datetime combination
+
+    Returns:
+        _type_: a pandas dataframe containing the orders with a combined datetime column
+    """
+    df[col_name] = df[col_name].apply(get_date) + df.iloc[
+        :, df.columns.get_loc(col_name) + 1
+    ].astype(str)
+    df[col_name] = pd.to_datetime(df[col_name], errors="coerce")
+    return df
+
+
 def get_orders(path: str = default_database_path) -> pd.DataFrame:
     """
     Opens an excel document to return its listed orders as a pandas dataframe.
@@ -289,25 +369,76 @@ def get_orders(path: str = default_database_path) -> pd.DataFrame:
     -------
     DataFrame
         Table of orders as pandas dataframe. Column names:
-            job, item, order_release, machine, tool, setuptime_material,
-            setuptime_coil, duration_machine, duration_hand, deadline,
-            calculated_start, calculated_end, planned_start, planned_end,
-            actual_start, actual_end
+            job, item, order_release, machine, machine_selection, tool,
+            setuptime_material, setuptime_coil, duration_machine,
+            duration_hand, deadline, calculated_start, calculated_end,
+            planned_start, planned_end, actual_start, actual_end
     """
     sheet_name = 'Datenbank_Auftragsdaten'
-    # TODO:
     order_df = pd.read_excel(path, sheet_name)  # Read file
     order_df = order_df.rename(columns=order_df.iloc[10])
+    # Combine separate date time columns to datetime
+    order_df = combine_datetime_columns(
+        order_df, "Spätester Bearbeitungsbeginn")
+    order_df = combine_datetime_columns(
+        order_df, "spätester Fertigstellungszeitpunkt")
+    order_df = combine_datetime_columns(
+        order_df, "Berechneter Bearbei-tungsbeginn")
+    order_df = combine_datetime_columns(
+        order_df, "Berechneter Fertigstellungs-zeitpunkt"
+    )
+    order_df = combine_datetime_columns(order_df, "PLAN-Bearbeitungs-beginn")
+    order_df = combine_datetime_columns(
+        order_df, "PLAN-Fertigstellungs-zeitpunkt")
+    order_df = combine_datetime_columns(order_df, "IST- Bearbeitungs-beginn")
+    order_df = combine_datetime_columns(
+        order_df, "IST-Fertigstellungs-zeitpunkt")
+    # Name machine number colums appropriately
+    order_df.columns.values[25] = "1531"
+    order_df.columns.values[26] = "1532"
+    order_df.columns.values[27] = "1533"
+    order_df.columns.values[28] = "1534"
+    order_df.columns.values[29] = "1535"
+    order_df.columns.values[30] = "1536"
+    order_df.columns.values[31] = "1537"
+    order_df.columns.values[32] = "1541"
+    order_df.columns.values[33] = "1542"
+    order_df.columns.values[34] = "1543"
+    # Combine all machine numbers into one column
+    order_df['machine_selection'] = ''
+    order_df['machine_selection'] += np.where(
+        order_df['1531'] == 'x', '1531,', '')
+    order_df['machine_selection'] += np.where(
+        order_df['1532'] == 'x', '1532,', '')
+    order_df['machine_selection'] += np.where(
+        order_df['1533'] == 'x', '1533,', '')
+    order_df['machine_selection'] += np.where(
+        order_df['1534'] == 'x', '1534,', '')
+    order_df['machine_selection'] += np.where(
+        order_df['1535'] == 'x', '1535,', '')
+    order_df['machine_selection'] += np.where(
+        order_df['1536'] == 'x', '1536,', '')
+    order_df['machine_selection'] += np.where(
+        order_df['1537'] == 'x', '1537,', '')
+    order_df['machine_selection'] += np.where(
+        order_df['1541'] == 'x', '1541,', '')
+    order_df['machine_selection'] += np.where(
+        order_df['1542'] == 'x', '1542,', '')
+    order_df['machine_selection'] += np.where(
+        order_df['1543'] == 'x', '1543', '')
+
     # Name first column to reference it for deletion
     order_df = order_df.rename(columns={order_df.columns[0]: 'Nichts'})
     order_df = order_df.drop('Nichts', axis=1)
     # Ignore first 14 rows since data starts at row 15
     order_df = order_df.drop(np.arange(13))
     order_df = order_df.reset_index(drop=True)
+    # Only select the relevant columns
     order_df = order_df[['Fertigungsauf-tragsnummer',
                          'Artikelnummer',
                          'Auftragseingabe-zeitpunkt',
                          'Nummer Wickel-rohrmaschine',
+                         'machine_selection',
                          'Werkzeug-nummer',
                          'Rüstzeit für WKZ/Materialwechsel',
                          'Rüstzeit für Coilwechsel',
@@ -322,10 +453,12 @@ def get_orders(path: str = default_database_path) -> pd.DataFrame:
                          'PLAN-Fertigstellungs-zeitpunkt',
                          'IST- Bearbeitungs-beginn',
                          'IST-Fertigstellungs-zeitpunkt']]
+    # Rename the columns into english
     order_df.rename(columns={'Fertigungsauf-tragsnummer': 'job',
                              'Artikelnummer': 'item',
                              'Auftragseingabe-zeitpunkt': 'order_release',
                              'Nummer Wickel-rohrmaschine': 'machine',
+                             'Maschinenangebot': 'machine_selection',
                              'Werkzeug-nummer': 'tool',
                              'Rüstzeit für WKZ/Materialwechsel':
                                  'setuptime_material',
@@ -349,6 +482,15 @@ def get_orders(path: str = default_database_path) -> pd.DataFrame:
                              'IST-Fertigstellungs-zeitpunkt':
                                  'actual_end'},
                     inplace=True)
+    order_df['order_release'] = pd.to_datetime(order_df['order_release'])
+    order_df['duration_machine'] = order_df['duration_machine'].map(
+        lambda x: datetime.timedelta(minutes=x))
+    order_df['duration_hand'] = order_df['duration_hand'].map(
+        lambda x: datetime.timedelta(minutes=x))
+    order_df['setuptime_material'] = order_df['setuptime_material'].map(
+        lambda x: datetime.timedelta(minutes=x))
+    order_df['setuptime_coil'] = order_df['setuptime_coil'].map(
+        lambda x: datetime.timedelta(minutes=x))
     return order_df
 
 
@@ -379,7 +521,7 @@ def calculate_end_time(start: datetime.datetime,
         The end time of the job.
     """
     if isinstance(start, pd.Timestamp):
-        start = datetime.datetime(start)
+        start = start.to_pydatetime()
     elif isinstance(start, datetime.datetime):
         pass
     else:
@@ -449,6 +591,7 @@ def naive_termination(order_df, start, last_tool):
     dataframe
         The orders with overwritten calculated_start and calculated_end.
     """
+    # TODO: Currently, setup time gets added but it should be subtracted
     machines = order_df['machine'].astype(int).unique()
     order_df = order_df.assign(setup_time=0)
     # Für jede Maschine
@@ -474,7 +617,9 @@ def naive_termination(order_df, start, last_tool):
             setup_time = calculate_setup_time(tool, last_tool)
             order_df.loc[order_df['job'] == order_num,
                          ['setup_time']] = setup_time
-            prod_time = int(row['duration_machine'])
+            prod_time = row['duration_machine']
+            if isinstance(prod_time, datetime.timedelta):
+                prod_time = prod_time.total_seconds() / 60
             runtime = prod_time + setup_time
             timestamp = calculate_end_time(start=timestamp,
                                            duration=runtime,
@@ -532,15 +677,20 @@ def combine_orders(order_df, start):
     return new_df
 
 
-# Debugging
-# df = get_orders()
-# print(df)
-# df.drop(index=df.index[:180], axis=0, inplace=True)
-# df = naive_termination(df, datetime.datetime(2022, 2, 27, 6, 0, 0), 'A0')
-# print(df[['order_release', 'machine', 'shift_model', 'duration_machine',
-#       'calculated_start', 'calculated_end', 'setup_time']])
-# visualization.gantt(df)
+if __name__ == "__main__":
+    # Debugging
+    df = get_orders()
+    df.drop(index=df.index[:180], axis=0, inplace=True)
+    # df = naive_termination(df, datetime.datetime(2022, 2, 27, 6, 0, 0), 'A0')
+    # print(df[['order_release', 'machine', 'machine_selection', 'shift_model',
+    #           'duration_machine', 'calculated_start', 'calculated_end',
+    #           'setup_time']])
+    df = pyomomachsched.opt_schedule(
+        df, datetime.datetime(2022, 2, 27, 6, 0, 0), 'A0')
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        print(df[['order_release', 'machine', 'machine_selection', 'shift_model',
+                  'duration_machine', 'calculated_start', 'calculated_end']])
+    visualization.gantt(df)
 
-
-# print(calculate_end_time(start=datetime.datetime(
-#     2022, 4, 14, 14, 0, 0), duration=450, shift_model='FLEX'))
+    # print(calculate_end_time(start=datetime.datetime(
+    #     2022, 4, 14, 14, 0, 0), duration=450, shift_model='FLEX'))
