@@ -10,6 +10,7 @@ from pyomo.environ import *
 from pyomo.gdp import *
 
 import termination
+from shift import ShiftModel
 
 """
 Model constraint definitions
