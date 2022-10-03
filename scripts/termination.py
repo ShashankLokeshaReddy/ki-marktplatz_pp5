@@ -316,7 +316,7 @@ def naive_termination(order_df, start, last_tool):
             prod_time = row['duration_machine']
             if isinstance(prod_time, datetime.timedelta):
                 prod_time = prod_time.total_seconds() / 60
-            runtime = prod_time + setup_time
+            runtime = prod_time - 17 + setup_time + 2
             timestamp = calculate_end_time(start=timestamp,
                                            duration=runtime,
                                            shift_model=shift_model)
@@ -381,11 +381,12 @@ if __name__ == "__main__":
     # print(df[['order_release', 'machine', 'machine_selection', 'shift_model',
     #           'duration_machine', 'calculated_start', 'calculated_end',
     #           'setup_time']])
+    # visualization.gantt(df)
     df = pyomomachsched.opt_schedule(
         df, datetime.datetime(2022, 2, 27, 6, 0, 0), 'A0')
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-        print(df[['order_release', 'machine', 'machine_selection', 'shift_model',
-                  'duration_machine', 'calculated_start', 'calculated_end']])
+        print(df[['order_release', 'tool', 'machine', 'machine_selection', 'shift_model',
+                  'duration_machine', 'setup_time', 'calculated_start', 'calculated_end']])
     visualization.gantt(df)
 
     # print(calculate_end_time(start=datetime.datetime(

@@ -165,16 +165,14 @@ class ShiftModel:
         """
         accumulated_seconds = 0
         current_time = start
-        while current_time != end:
+        # Set end time to a valid time of the shift model
+        end = self.get_earliest_time(end)
+        while current_time < end:
             # Check if current time is actually during a shift timeframe
             current_time = self.get_earliest_time(
                 current_time)
-            day_shift = self.shifts[self.shift_model][current_time.weekday(
-            )]
+            day_shift = self.shifts[self.shift_model][current_time.weekday()]
             for interval in day_shift:
-                # Check if current time is actually during a shift timeframe
-                current_time = self.get_earliest_time(
-                    current_time)
                 shift_end = datetime.datetime.combine(current_time.date(),
                                                       interval[1])
                 if current_time > shift_end:
@@ -183,17 +181,21 @@ class ShiftModel:
 
                 if end >= shift_end:
                     # Whole interval can be worked through
-                    # Add all seeconds during this interval
+                    # Add all seconds during this interval
                     accumulated_seconds += (shift_end -
                                             current_time).total_seconds()
+                    # Set current time to end of current interval
                     current_time = current_time.replace(
                         hour=interval[1].hour,
-                        minute=interval[1].minute)
+                        minute=interval[1].minute,
+                        second=interval[1].second)
                 else:
                     # Work stops during current interval
                     accumulated_seconds += (end - current_time).total_seconds()
                     current_time = end
                     break
+                # Check if current time is actually during a shift timeframe
+                current_time = self.get_earliest_time(current_time)
         return accumulated_seconds
 
     def add_time(self, working_time: int) -> datetime.datetime:
@@ -213,7 +215,7 @@ class ShiftModel:
         if isinstance(working_time, datetime.timedelta):
             working_time = working_time.total_seconds() / 60
 
-        # Check if current time is actually during a shift timeframe
+        # Set current time to a valid shift timeframe
         self.current_shift_time = self.get_earliest_time(
             self.current_shift_time)
 
@@ -221,9 +223,6 @@ class ShiftModel:
             day_shift = self.shifts[self.shift_model][self.current_shift_time.weekday(
             )]
             for interval in day_shift:
-                # Check if current time is actually during a shift timeframe
-                self.current_shift_time = self.get_earliest_time(
-                    self.current_shift_time)
                 shift_end = datetime.datetime.combine(self.current_shift_time.date(),
                                                       interval[1])
                 if self.current_shift_time > shift_end:
@@ -235,16 +234,22 @@ class ShiftModel:
                 if working_time >= interval_minutes:
                     # Whole interval can be worked through
                     working_time -= interval_minutes
+                    # Set current time to end of current interval
                     self.current_shift_time = self.current_shift_time.replace(
                         hour=interval[1].hour,
-                        minute=interval[1].minute)
+                        minute=interval[1].minute,
+                        second=interval[1].second)
                 else:
                     # Work stops during current interval
                     self.current_shift_time += datetime.timedelta(
                         minutes=working_time)
                     working_time = 0
-                if not working_time:
                     break
+                # Check if current time is actually during a shift timeframe
+                self.current_shift_time = self.get_earliest_time(
+                    self.current_shift_time)
+        self.current_shift_time = self.get_earliest_time(
+            self.current_shift_time)
         return self.current_shift_time
 
     def get_shift_names(self):
@@ -286,21 +291,36 @@ class ShiftModel:
                 # The start time lies before the shift begins,
                 # set to shift beginning
                 return start.replace(hour=interval[0].hour,
-                                     minute=interval[0].minute)
+                                     minute=interval[0].minute,
+                                     second=interval[0].second)
         # The start time does not lie in the working hours of the shift day
         # return the next available day
         # TODO: Check end of year, to jump to next year
         temp_interval = self.shifts[self.shift_model][(weekday + 1) % 6][0]
-        day_skips = 1
-        if temp_interval[1] == datetime.time(0, 0) and weekday == 5:
-            # Saturday, no hours for this shift, get monday
-            day_skips = 2
         start = datetime.datetime(start.year, start.month, start.day,
                                   temp_interval[0].hour,
-                                  temp_interval[0].minute) + \
-            datetime.timedelta(days=day_skips)
-        if start.date() in self.company_holidays:
-            # New date lies on holiday, calculate new date
-            return self.get_earliest_time(start)
-        else:
-            return start
+                                  temp_interval[0].minute,
+                                  temp_interval[0].second) + \
+            datetime.timedelta(days=1)
+        # Check again if the new start time lies in an actual shift interval
+        return self.get_earliest_time(start)
+
+
+# Unit tests
+if __name__ == "__main__":
+    shift = ShiftModel(datetime.datetime(2022, 6, 3), 'FLEX')
+    print(
+        f"2 hours between 2 days test:\nExpected: {7200.0}, actual: {shift.count_time(datetime.datetime(2022, 6, 7, 14, 0, 0), datetime.datetime(2022, 6, 8, 7, 0, 0))}")
+    print(
+        f"Hours on weekend test:\nExpected: {0.0}, actual: {shift.count_time(datetime.datetime(2022, 6, 4, 14, 0, 0), datetime.datetime(2022, 6, 5, 7, 0, 0))}")
+    print(
+        f"Hours over holiday test:\nExpected: {3600.0}, actual: {shift.count_time(datetime.datetime(2022, 6, 3, 14, 0, 0), datetime.datetime(2022, 6, 7, 7, 0, 0))}")
+    print(
+        f"Skip holidays test:\nExpected: {7200.0}, actual: {shift.count_time(datetime.datetime(2022, 6, 15, 14, 0, 0), datetime.datetime(2022, 6, 20, 7, 0, 0))}")
+    print(
+        f"Get earliest time test:\nExpected: 2022-06-07 06:00:00, actual: {shift.get_earliest_time(datetime.datetime(2022, 6, 7))}")
+    shift = ShiftModel(datetime.datetime(2022, 3, 9), 'W01S3')
+    time_in_shift = shift.count_time(datetime.datetime(
+        2022, 3, 9), datetime.datetime(2022, 3, 21))
+    print(
+        f"Time in shift calculation test:\nExpected: 2022-03-21, actual: {shift.add_time(time_in_shift / 60)}")
