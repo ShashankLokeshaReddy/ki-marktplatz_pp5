@@ -43,7 +43,7 @@ def combine_datetime_columns(df, col_name):
     df[col_name] = df[col_name].apply(get_date) + df.iloc[
         :, df.columns.get_loc(col_name) + 1
     ].astype(str)
-    df[col_name] = pd.to_datetime(df[col_name], errors="coerce")
+    df[col_name] = pd.to_datetime(df[col_name], errors='ignore')
     return df
 
 
@@ -179,6 +179,7 @@ def get_orders(path: str = default_database_path) -> pd.DataFrame:
                                  'actual_end'},
                     inplace=True)
     order_df['order_release'] = pd.to_datetime(order_df['order_release'])
+    order_df['deadline'] = pd.to_datetime(order_df['deadline'])
     order_df['duration_machine'] = order_df['duration_machine'].map(
         lambda x: datetime.timedelta(minutes=x))
     order_df['duration_hand'] = order_df['duration_hand'].map(
@@ -376,7 +377,7 @@ def combine_orders(order_df, start):
 if __name__ == "__main__":
     # Debugging
     df = get_orders()
-    df.drop(index=df.index[:180], axis=0, inplace=True)
+    # df.drop(index=df.index[:180], axis=0, inplace=True)
     # df = naive_termination(df, datetime.datetime(2022, 2, 27, 6, 0, 0), 'A0')
     # print(df[['order_release', 'machine', 'machine_selection', 'shift_model',
     #           'duration_machine', 'calculated_start', 'calculated_end',

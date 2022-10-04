@@ -1,3 +1,4 @@
+from sqlite3 import Timestamp
 import pandas as pd
 
 import matplotlib.pyplot as plt
@@ -34,7 +35,8 @@ def opt_schedule(df, starttime, last_tool):
     jobs = range(amount_of_jobs)
     # All datetime values throughout this function need to be
     # converted to seconds, since pyomo does not calculate with datetimes
-    durations = {j: df.iloc[j]['duration_machine'].total_seconds()
+    # subtract setuptime from durations, since they are already part of that
+    durations = {j: df.iloc[j]['duration_machine'].total_seconds() - df.iloc[j]['setuptime_material'].total_seconds() - df.iloc[j]['setuptime_coil'].total_seconds()
                  for j in jobs}
     first_release = df['order_release'].min().to_pydatetime()
 
@@ -67,7 +69,6 @@ def opt_schedule(df, starttime, last_tool):
     setup_times[amount_of_jobs] = df.iloc[0]['setuptime_material'].total_seconds(
     ) + df.iloc[0]['setuptime_coil'].total_seconds()
     setup_times.loc[amount_of_jobs] = 0
-    print(setup_times)
     durations[amount_of_jobs] = 0
     releases[amount_of_jobs] = first_release.timestamp()
     deadlines[amount_of_jobs] = df['deadline'].max().to_pydatetime()
@@ -122,12 +123,9 @@ def opt_schedule(df, starttime, last_tool):
     # binary matrix whether job j is scheduled before job k on machine m
     m.x = Var(m.MACH_PAIRS, domain=Binary)
 
-    # binary variables denoting which job will run first
-    m.first = Var(m.JM, domain=Binary)
-
     m.pprint()
 
-    # for modeling disjunctive constraints
+    # very large value for constraint c6
     big_m = max(releases) + sum(durations.values())
 
     # Objective
@@ -136,8 +134,13 @@ def opt_schedule(df, starttime, last_tool):
     # define makespan
     m.c0 = Constraint(m.J, rule=lambda m, j: m.completion[j] <= m.makespan)
     # job starts after it is released
+    # BUG: Jobs sometimes start a few minutes before their release
     m.c1 = Constraint(m.J, rule=lambda m,
-                      j: m.completion[j] - durations[j] >= releases[j])
+                      j: m.completion[j] - durations[j] -
+                      sum(setup_times[k][j] *
+                          m.x[k, j, mach] for k in m.J_dummy if j != k
+                          for mach in m.M if (k, j, mach) in machine_pairs) >=
+                      releases[j])
     # every job has exactly one predecessor
     m.c2 = Constraint(m.J, rule=lambda m, k: sum(
         m.x[j, k, mach] for j in m.J_dummy if j != k for mach in m.M if (j, k, mach) in machine_pairs) == 1)
@@ -169,10 +172,7 @@ def opt_schedule(df, starttime, last_tool):
     m.c8 = Constraint(m.M, rule=lambda m,
                       mach: m.completion_machine[mach] <= m.makespan)
 
-    SolverFactory('gurobi', solver_io="python").solve(m).write()
-    log_infeasible_constraints(m, log_expression=True, log_variables=True)
-    logging.basicConfig(filename='example.log',
-                        encoding='utf-8', level=logging.INFO)
+    SolverFactory('cbc').solve(m).write()
 
     # Enter schedule into dataframe
     df['setup_time'] = 0
@@ -185,7 +185,6 @@ def opt_schedule(df, starttime, last_tool):
         for jj, k, mach in m.x.keys():
             try:
                 if k == j and pyomo.environ.value(m.x[jj, k, mach]):
-                    print(f"jj: {jj}, k: {k}, mach: {mach}")
                     # job jj ran right before j on the same machine
                     setup_time = setup_times[jj][k]
                     machine = mach
@@ -194,8 +193,6 @@ def opt_schedule(df, starttime, last_tool):
                 # no value for current m.x
                 continue
 
-        print(
-            f"completion: {m.completion[j]()}, duration: {durations[j]}, setup_time: {setup_time}")
         actual_start = shift.add_time(
             (m.completion[j]() - durations[j] - setup_time) / 60 - first_release.timestamp() / 60)
 
@@ -207,7 +204,8 @@ def opt_schedule(df, starttime, last_tool):
         # Get chosen machine by iterating through m.z
         df.iat[int(j), df.columns.get_loc('machine')] = machine
         df.iat[int(j), df.columns.get_loc('setup_time')] = setup_time
-        print(f'machine: {machine}, release: {releases[j]},\
-            start: {m.completion[j]() - durations[j] - setup_time}, end: {m.completion[j]()}')
+
+    print(
+        f"Planned jobs: {amount_of_jobs}. Missed deadlines: {sum(df['calculated_end'] > df['deadline'])}")
 
     return df

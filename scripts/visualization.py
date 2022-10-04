@@ -55,7 +55,6 @@ def gantt(order_df):
              verticalalignment='bottom', horizontalalignment='left',
              transform=axs.transAxes,
              color='black', fontsize=15)
-    axs.text(0, 0, shift_name)
     shift = ShiftModel(datetime.datetime(2022, 3, 6),
                        shift_name)
     shift_intervals = []
