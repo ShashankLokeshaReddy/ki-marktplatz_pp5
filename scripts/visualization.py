@@ -46,11 +46,13 @@ company_holidays = [datetime.date(2022, 1, 1),
 def gantt(order_df):
     """Visualize the order table as a Gantt chart as a job and a machine chart.
     """
+    # TODO: Seperate into smaller functions
     bw = 0.3
     fig, axs = plt.subplots(figsize=(12, 0.7 * order_df.shape[0]))
     idx = 0
     # Shift downtimes as gray bars
-    shift_name = order_df.iloc[-1]['shift_model']
+    shift_name = order_df.iloc[-1]['shift']
+    # shift_name = 'W01S3'
     axs.text(0.05, 1.01, f'shift: {shift_name}',
              verticalalignment='bottom', horizontalalignment='left',
              transform=axs.transAxes,
@@ -58,8 +60,12 @@ def gantt(order_df):
     shift = ShiftModel(datetime.datetime(2022, 3, 6),
                        shift_name)
     shift_intervals = []
+    if order_df['calculated_end'].max().date() < order_df['deadline'].max().to_pydatetime().date():
+        end = order_df['deadline'].max().to_pydatetime().date()
+    else:
+        end = order_df['calculated_end'].max().date()
     for day in pd.date_range(start=order_df['order_release'].min().to_pydatetime().date(),
-                             end=order_df['deadline'].max().to_pydatetime().date()).strftime('%Y-%m-%d').tolist():
+                             end=end).strftime('%Y-%m-%d').tolist():
         day = datetime.datetime.fromisoformat(day)
         for interval in shift.shifts[shift_name][day.weekday()]:
             x = datetime.datetime.combine(day, interval[0])
@@ -104,7 +110,7 @@ def gantt(order_df):
         #                           idx + bw, idx + bw, idx - bw], color='k')
         # Machine number
         axs.text(row['calculated_end'], idx,
-                 str(row['machine']), color='black', weight='bold',
+                 str(row['selected_machine']), color='black', weight='bold',
                  horizontalalignment='left', verticalalignment='center')
         idx += 1
 
@@ -125,16 +131,18 @@ def gantt(order_df):
 
     # Machine plot
     # TODO: List all machines, even when not used at all
-    machines = sorted([str(i) for i in order_df['machine'].unique()])
+    machines = sorted([str(i) for i in order_df['machines'].unique()])
+    # remove duplicates
+    machines = list(dict.fromkeys(machines))
 
     fig, axs = plt.subplots(figsize=(12, 5))
     # Shift downtimes as gray bars
-    shift_name = order_df.iloc[-1]['shift_model']
+    # TODO: Put into own function
     shift = ShiftModel(datetime.datetime(2022, 3, 6),
                        shift_name)
     shift_intervals = []
     for day in pd.date_range(start=order_df['order_release'].min().to_pydatetime().date(),
-                             end=order_df['deadline'].max().to_pydatetime().date()).strftime('%Y-%m-%d').tolist():
+                             end=end).strftime('%Y-%m-%d').tolist():
         day = datetime.datetime.fromisoformat(day)
         for interval in shift.shifts[shift_name][day.weekday()]:
             x = datetime.datetime.combine(day, interval[0])
@@ -151,7 +159,7 @@ def gantt(order_df):
 
     texts = []
     for index, row in order_df.iterrows():
-        idx = machines.index(str(row['machine']))
+        idx = machines.index(str(row['selected_machine']))
         x = row['calculated_start']
         y = row['calculated_end']
         axs.fill_between([x, y], [idx - bw / 2, idx - bw / 2],

@@ -2,10 +2,10 @@ import datetime
 
 
 class ShiftModel:
-    """Add description
+    """Handles shift times and holidays of a company.
     """
 
-    def __init__(self, current_shift_time, shift_model):
+    def __init__(self, current_shift_time, shift):
         # TODO: This is just a temporary solution, the values should be read from somewhere else
         # TODO: Move this data structure somewhere else, so it does not have to be loaded with each instantiation
         # Time intervals of each shift model. 0:=Monday, 1:=Tuesday, and so on.
@@ -138,14 +138,62 @@ class ShiftModel:
                                  datetime.date(2022, 12, 30),
                                  datetime.date(2022, 12, 31),
                                  ]
-        if shift_model.lower() not in [i.lower() for i in self.get_shift_names()]:
+        if shift.lower() not in [i.lower() for i in self.get_shift_names()]:
             raise ValueError(
-                f'Object instantiation failed, since "{shift_model}" is not' +
+                f'Object instantiation failed, since "{shift}" is not' +
                 ' a supported shift model.')
-        self.shift_model = shift_model.upper()
+        self.shift = shift.upper()
         # Set current shift time to the first hour of the next shift day if it
         # is outside the working hours
         self.current_shift_time = self.get_earliest_time(current_shift_time)
+
+    def compute_work_period(self, start_time, work_time: float):
+        """Compute the work period based on the shift model for a given start datetime and a work time.
+        Returns a tuple of the working period begin and end as datetime.
+
+        Args:
+            start_time (_type_): _description_
+            work_time (float): Time for job work time given in minutes as float
+        """
+        # Compute earliest actual start time within shift model
+        period_start = self.get_earliest_time(start_time)
+        current_datetime = period_start
+        # convert work_time to seconds
+        work_time = int(work_time) * 60 + \
+            round((work_time - int(work_time)) * 60)
+
+        while work_time:
+            day_shift = self.shifts[self.shift][current_datetime.weekday()]
+            for interval in day_shift:
+                # Correct current time to be in an interval of the shift model
+                current_datetime = self.get_earliest_time(current_datetime)
+
+                # Check if current time is in the current interval
+                if (
+                    interval[0] <= current_datetime.time()
+                    and current_datetime.time() < interval[1]
+                ):
+                    # Compute remaining time in the interval
+                    tmp_end = datetime.datetime.combine(
+                        datetime.date.today(), interval[1]
+                    )
+                    tmp_start = datetime.datetime.combine(
+                        datetime.date.today(), current_datetime.time()
+                    )
+                    interval_delta = tmp_end - tmp_start
+
+                    if work_time >= interval_delta.seconds:
+                        current_datetime = current_datetime.replace(
+                            hour=interval[1].hour, minute=interval[1].minute
+                        )
+                        work_time -= interval_delta.seconds
+                    else:
+                        current_datetime = current_datetime + datetime.timedelta(
+                            seconds=work_time
+                        )
+                        work_time = 0
+
+        return (period_start, current_datetime)
 
     def count_time(self, start: datetime.datetime, end: datetime.datetime) -> int:
         """Counts the amount of seconds of the shift in the given interval
@@ -171,7 +219,7 @@ class ShiftModel:
             # Check if current time is actually during a shift timeframe
             current_time = self.get_earliest_time(
                 current_time)
-            day_shift = self.shifts[self.shift_model][current_time.weekday()]
+            day_shift = self.shifts[self.shift][current_time.weekday()]
             for interval in day_shift:
                 shift_end = datetime.datetime.combine(current_time.date(),
                                                       interval[1])
@@ -220,7 +268,7 @@ class ShiftModel:
             self.current_shift_time)
 
         while working_time:
-            day_shift = self.shifts[self.shift_model][self.current_shift_time.weekday(
+            day_shift = self.shifts[self.shift][self.current_shift_time.weekday(
             )]
             for interval in day_shift:
                 shift_end = datetime.datetime.combine(self.current_shift_time.date(),
@@ -283,7 +331,7 @@ class ShiftModel:
         weekday = start.weekday()
         # Iterate through all time intervals of the day and check whether
         # the start time lies in one of those intervals
-        for interval in self.shifts[self.shift_model][weekday]:
+        for interval in self.shifts[self.shift][weekday]:
             if interval[0] <= start.time() < interval[1]:
                 # The start time lies between the working hours of the shift
                 return start
@@ -296,7 +344,7 @@ class ShiftModel:
         # The start time does not lie in the working hours of the shift day
         # return the next available day
         # TODO: Check end of year, to jump to next year
-        temp_interval = self.shifts[self.shift_model][(weekday + 1) % 6][0]
+        temp_interval = self.shifts[self.shift][(weekday + 1) % 6][0]
         start = datetime.datetime(start.year, start.month, start.day,
                                   temp_interval[0].hour,
                                   temp_interval[0].minute,
