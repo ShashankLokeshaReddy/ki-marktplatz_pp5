@@ -10,14 +10,14 @@ import pandas as pd
 
 
 # Current script directory
-script_directory = pathlib.Path(__file__).parent.resolve()
+SCRIPT_DIRECTORY = pathlib.Path(__file__).parent.resolve()
 # Default path of the order database excel file
-default_westaflex_table_path = os.path.join(
-    script_directory, "..", "data", "20220706_Auftragsdatenbank_last_10_modified.xlsm"
+DEFAULT_WESTAFLEX_TABLE_PATH = os.path.join(
+    SCRIPT_DIRECTORY, "..", "data", "20220706_Auftragsdatenbank_last_10_modified.xlsm"
 )
 
 # The returned dataframes need to have the following column names, more are ok
-common_dataframe = pd.DataFrame(
+COMMON_DATAFRAME = pd.DataFrame(
     columns=[
         "job",
         "order_release",
@@ -33,6 +33,7 @@ common_dataframe = pd.DataFrame(
         "latest_start",
         "calculated_start",
         "calculated_end",
+        "calculated_setup_time",
         "planned_start",
         "planned_end",
         "final_start",
@@ -40,7 +41,7 @@ common_dataframe = pd.DataFrame(
     ]
 )
 # The company name has to be set as an attribute
-common_dataframe.attrs["company_name"] = ""
+COMMON_DATAFRAME.attrs["company_name"] = ""
 
 
 class JobStatus(Enum):
@@ -135,7 +136,7 @@ def filter_orders(order_df, planning_period_start, planning_period_end):
     return order_df
 
 
-def get_westaflex_orders(path: str = default_westaflex_table_path) -> pd.DataFrame:
+def get_westaflex_orders(path: str = DEFAULT_WESTAFLEX_TABLE_PATH) -> pd.DataFrame:
     """
     Opens an excel document to return its listed orders as a pandas dataframe.
 
@@ -184,17 +185,17 @@ def get_westaflex_orders(path: str = default_westaflex_table_path) -> pd.DataFra
     order_df.columns.values[33] = "1542"
     order_df.columns.values[34] = "1543"
     # Combine all machine numbers into one column
-    order_df["selected_machine"] = ""
-    order_df["selected_machine"] += np.where(order_df["1531"] == "x", "1531,", "")
-    order_df["selected_machine"] += np.where(order_df["1532"] == "x", "1532,", "")
-    order_df["selected_machine"] += np.where(order_df["1533"] == "x", "1533,", "")
-    order_df["selected_machine"] += np.where(order_df["1534"] == "x", "1534,", "")
-    order_df["selected_machine"] += np.where(order_df["1535"] == "x", "1535,", "")
-    order_df["selected_machine"] += np.where(order_df["1536"] == "x", "1536,", "")
-    order_df["selected_machine"] += np.where(order_df["1537"] == "x", "1537,", "")
-    order_df["selected_machine"] += np.where(order_df["1541"] == "x", "1541,", "")
-    order_df["selected_machine"] += np.where(order_df["1542"] == "x", "1542,", "")
-    order_df["selected_machine"] += np.where(order_df["1543"] == "x", "1543", "")
+    order_df["machines"] = ""
+    order_df["machines"] += np.where(order_df["1531"] == "x", "1531,", "")
+    order_df["machines"] += np.where(order_df["1532"] == "x", "1532,", "")
+    order_df["machines"] += np.where(order_df["1533"] == "x", "1533,", "")
+    order_df["machines"] += np.where(order_df["1534"] == "x", "1534,", "")
+    order_df["machines"] += np.where(order_df["1535"] == "x", "1535,", "")
+    order_df["machines"] += np.where(order_df["1536"] == "x", "1536,", "")
+    order_df["machines"] += np.where(order_df["1537"] == "x", "1537,", "")
+    order_df["machines"] += np.where(order_df["1541"] == "x", "1541,", "")
+    order_df["machines"] += np.where(order_df["1542"] == "x", "1542,", "")
+    order_df["machines"] += np.where(order_df["1543"] == "x", "1543", "")
 
     # Name first column to reference it for deletion
     order_df = order_df.rename(columns={order_df.columns[0]: "Nichts"})
@@ -202,6 +203,8 @@ def get_westaflex_orders(path: str = default_westaflex_table_path) -> pd.DataFra
     # Ignore first 14 rows since data starts at row 15
     order_df = order_df.drop(np.arange(13))
     order_df = order_df.reset_index(drop=True)
+    # Create column for calculated setup time
+    order_df["calculated_setup_time"] = ""
     # Only select the relevant columns
     order_df = order_df[
         [
@@ -209,7 +212,8 @@ def get_westaflex_orders(path: str = default_westaflex_table_path) -> pd.DataFra
             "Artikelnummer",
             "Auftragseingabe-zeitpunkt",
             "Nummer Wickel-rohrmaschine",
-            "selected_machine",
+            "machines",
+            "calculated_setup_time",
             "Werkzeug-nummer",
             "Rüstzeit für WKZ/Materialwechsel",
             "Rüstzeit für Coilwechsel",
@@ -265,6 +269,7 @@ def get_westaflex_orders(path: str = default_westaflex_table_path) -> pd.DataFra
     order_df["setuptime_coil"] = order_df["setuptime_coil"].map(
         lambda x: datetime.timedelta(minutes=x)
     )
+    order_df["setup_time"] = order_df["setuptime_material"] + order_df["setuptime_coil"]
 
     order_df.attrs["company_name"] = "westaflex"
     return set_order_status(order_df)

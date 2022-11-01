@@ -13,37 +13,6 @@ import numpy as np
 import pandas as pd
 
 
-def calculate_setup_time(tool1: str, tool2: str) -> int:
-    """
-    Returns 15 if both given tools are not equal, otherwise returns 0.
-
-    Takes two tool names as strings and returns a naive setup time calculation.
-    If the same tool is reused for the next order, no setup time is required,
-    otherwise a fixed 15 minutes is added to the overall run time.
-    The strings are case insensitive and white spaces get removed.
-
-    Parameters
-    ----------
-    tool1 : str
-        Tool name as string e.g. 'A0 023'
-    tool2 : str
-        Tool name as string e.g. 'A0 023'
-
-    Returns
-    -------
-    int
-        setup time in minutes
-    """
-    tool1 = str(tool1)
-    tool2 = str(tool2)
-    # Remove whitespaces and make case insensitive comparison
-    if tool1.casefold().replace(" ", "") == tool2.casefold().replace(" ", ""):
-        setup_time = 0
-    else:
-        setup_time = 15
-    return setup_time
-
-
 # TODO: Rüstzeit erste Maschine?
 # TODO: Startzeit current time?
 def naive_termination(order_df, start, last_tool):
@@ -70,8 +39,7 @@ def naive_termination(order_df, start, last_tool):
         The orders with overwritten calculated_start and calculated_end.
     """
     machines = order_df["selected_machine"].astype(int).unique()
-    order_df = order_df.assign(setup_time=0)
-    company = order_df["company_name"]
+    company = order_df.attrs["company_name"]
     # Für jede Maschine
     for machine in machines:
         df_machine = order_df[order_df["selected_machine"].astype(int) == machine]
@@ -90,11 +58,13 @@ def naive_termination(order_df, start, last_tool):
 
             order_df.loc[order_df["job"] == order_num, ["calculated_start"]] = timestamp
             tool = row["tool"]
-            setup_time = calculate_setup_time(tool, last_tool)
-            order_df.loc[order_df["job"] == order_num, ["setup_time"]] = setup_time
+            setup_time = row["setup_time"] if tool.casefold() != last_tool.casefold() else datetime.timedelta(0)
+            order_df.loc[order_df["job"] == order_num, ["calculated_setup_time"]] = setup_time
             prod_time = row["duration_machine"]
             if isinstance(prod_time, datetime.timedelta):
                 prod_time = prod_time.total_seconds() / 60
+            if isinstance(setup_time, datetime.timedelta):
+                setup_time = setup_time.total_seconds() / 60
             runtime = prod_time - 17 + setup_time + 2
             timestamp = utility.calculate_end_time(
                 start=timestamp, duration=runtime, company=company, shift=shift
@@ -116,6 +86,20 @@ if __name__ == "__main__":
     # Debugging
     df = getordersdf.get_westaflex_orders()
     df.drop(index=df.index[:180], axis=0, inplace=True)
+    print(
+        df[
+            [
+                "order_release",
+                "machines",
+                "selected_machine",
+                "shift",
+                "duration_machine",
+                "calculated_start",
+                "calculated_end",
+                "setup_time",
+            ]
+        ]
+    )
     df = naive_termination(df, datetime.datetime(2022, 2, 27, 6, 0, 0), "A0")
     print(
         df[

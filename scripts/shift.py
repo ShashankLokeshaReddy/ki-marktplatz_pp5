@@ -26,7 +26,7 @@ class ShiftModel:
             self.company_holidays = self.read_holidays_csv(name)
         except OSError as exc:
             raise OSError(f"A holidays table for {name} does not exist") from exc
-        if not self.shifts["shift"].str.contains(shift_name).any():
+        if not self.shifts["shift"].apply(lambda x: str(x).lower()).str.contains(shift_name.lower()).any():
             raise ValueError(
                 f'Object instantiation failed, since "{shift_name}" is not'
                 + " a supported shift model."

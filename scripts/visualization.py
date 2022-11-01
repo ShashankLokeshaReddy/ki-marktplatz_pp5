@@ -82,7 +82,12 @@ def gantt(order_df):
         .tolist()
     ):
         day = datetime.datetime.fromisoformat(day)
-        for interval in shift.shifts[shift_name][day.weekday()]:
+        day_shift = shift.shifts.loc[
+                (shift.shifts["shift"] == shift_name)
+                & (shift.shifts["weekday"] == day.weekday()),
+                "interval0":"interval5",
+            ].values[0]
+        for interval in day_shift[day_shift != None]:
             x = datetime.datetime.combine(day, interval[0])
             y = datetime.datetime.combine(day, interval[1])
             shift_intervals.append((x, y))
@@ -131,7 +136,10 @@ def gantt(order_df):
                 linewidth=0,
             )
         # Setup time in yellow
-        y = x + datetime.timedelta(minutes=row["setup_time"])
+        calculated_setup_time = row["calculated_setup_time"]
+        if not isinstance(calculated_setup_time, datetime.timedelta):
+            calculated_setup_time = datetime.timedelta(minutes=calculated_setup_time)
+        y = x + calculated_setup_time
         axs.fill_between(
             [x, y],
             [idx - bw / 2, idx - bw / 2],
@@ -176,7 +184,7 @@ def gantt(order_df):
 
     # Machine plot
     # TODO: List all machines, even when not used at all
-    machines = sorted([str(i) for i in order_df["machines"].unique()])
+    machines = sorted([str(i) for i in order_df["selected_machine"].unique()])
     # remove duplicates
     machines = list(dict.fromkeys(machines))
 
@@ -193,7 +201,12 @@ def gantt(order_df):
         .tolist()
     ):
         day = datetime.datetime.fromisoformat(day)
-        for interval in shift.shifts[shift_name][day.weekday()]:
+        day_shift = shift.shifts.loc[
+                (shift.shifts["shift"] == shift_name)
+                & (shift.shifts["weekday"] == day.weekday()),
+                "interval0":"interval5",
+            ].values[0]
+        for interval in day_shift[day_shift != None]:
             x = datetime.datetime.combine(day, interval[0])
             y = datetime.datetime.combine(day, interval[1])
             shift_intervals.append((x, y))

@@ -17,7 +17,8 @@ from shift import ShiftModel
 
 
 # TODO: Manual labor
-# TODO: Plan for just one week
+# TODO: Consider case with different shifts in table, right now the shift of the first job is taken which is dumb
+# TODO: Plan for just one week and ignore already planned jobs
 # TODO: Bug where each job begins one hour later (conversion between seconds and datetime?)
 
 
@@ -32,33 +33,48 @@ def opt_schedule(df, starttime, last_tool):
         raise ValueError(
             f"starttime parameter needs to be datetime object. Given: {type(starttime)}"
         )
+    # Assert that all necessary columns are in the dataframe
+    necessary_columns = set(
+        [
+            "order_release",
+            "machines",
+            "duration_machine",
+            "setup_time",
+            "tool",
+            "shift",
+            "deadline",
+        ]
+    )
+    if not necessary_columns.issubset(df.columns):
+        raise ValueError(
+            "Given DataFrame does not have all the necessary columns. "
+            + f"Missing columns: {necessary_columns - df.columns}"
+        )
     df["order_release"] = df["order_release"].apply(
         lambda x: starttime if x < starttime else x
     )
 
-    # TODO: generalize machines instead of hard coding them
-    machines = [
-        "1531",
-        "1532",
-        "1533",
-        "1534",
-        "1535",
-        "1536",
-        "1537",
-        "1541",
-        "1542",
-        "1543",
-    ]
+    machines = set(
+        [
+            machine
+            for machine_list in df["machines"].tolist()
+            for machine in machine_list.split(",")
+            if machine != ""
+        ]
+    )
     company = df.attrs["company_name"]
+    if not company:
+        raise ValueError(
+            "Given DataFrame does not contain the company name as attribute."
+        )
     amount_of_jobs = len(df.index)
     jobs = range(amount_of_jobs)
     # All datetime values throughout this function need to be
-    # converted to seconds, since pyomo does not calculate with datetimes
-    # subtract setuptime from durations, since they are already part of that
+    # converted to seconds, since pyomo does not calculate with datetimes.
+    # Subtract setuptime from durations, since they are already part of that
     durations = {
         j: df.iloc[j]["duration_machine"].total_seconds()
-        - df.iloc[j]["setuptime_material"].total_seconds()
-        - df.iloc[j]["setuptime_coil"].total_seconds()
+        - df.iloc[j]["setup_time"].total_seconds()
         for j in jobs
     }
     first_release = df["order_release"].min().to_pydatetime()
@@ -67,8 +83,7 @@ def opt_schedule(df, starttime, last_tool):
     setup_times = pd.DataFrame(
         [
             [
-                df.iloc[j]["setuptime_material"].total_seconds()
-                + df.iloc[j]["setuptime_coil"].total_seconds()
+                df.iloc[j]["setup_time"].total_seconds()
                 if df.iloc[j]["tool"] != df.iloc[i]["tool"] and i != j
                 else 0
                 for j in jobs
@@ -84,27 +99,23 @@ def opt_schedule(df, starttime, last_tool):
     # they would be time-scaled differently
     deadlines = {}
     releases = {}
-    shift = df.iloc[1]["shift"]
-    # shift = 'FLEX'
+    shift_name = df.iloc[1]["shift"]
     for job_id in jobs:
         # Move release times based on total time in the shift
-        shift = ShiftModel(company, shift, first_release)
+        shift = ShiftModel(company, shift_name, first_release)
         # Get earliest time the job can be worked on
         releases[job_id] = first_release.timestamp() + shift.count_time(
             first_release, df.iloc[job_id]["order_release"]
         )
         # Strip non-shift time from job duration and adjust deadline accordingly
-        shift = ShiftModel(company, shift, df.iloc[job_id]["order_release"])
+        shift = ShiftModel(company, shift_name, df.iloc[job_id]["order_release"])
         deadlines[job_id] = releases[job_id] + shift.count_time(
             df.iloc[job_id]["order_release"], df.iloc[job_id]["deadline"]
         )
 
     # add dummy job with standard setup time if switching from dummy job to other job
     # otherwise 0. Dummy job has 0 duration
-    setup_times[amount_of_jobs] = (
-        df.iloc[0]["setuptime_material"].total_seconds()
-        + df.iloc[0]["setuptime_coil"].total_seconds()
-    )
+    setup_times[amount_of_jobs] = df.iloc[0]["setup_time"].total_seconds()
     setup_times.loc[amount_of_jobs] = 0
     durations[amount_of_jobs] = 0
     releases[amount_of_jobs] = first_release.timestamp()
@@ -120,15 +131,13 @@ def opt_schedule(df, starttime, last_tool):
 
     # each job is restricted to certain machines
     compatible_assignments = {
-        (j, m) for j in jobs for m in machines if m in df.iloc[j]["selected_machine"]
+        (j, m) for j in jobs for m in machines if m in df.iloc[j]["machines"]
     }
     jobs_by_machine = {
-        m: [j for j in jobs if m in df.iloc[j]["selected_machine"]] for m in machines
+        m: [j for j in jobs if m in df.iloc[j]["machines"]] for m in machines
     }
     m.JM = Set(within=m.J * m.M, initialize=compatible_assignments)
-    m.M_relevant = [
-        m for j in jobs for m in machines if m in df.iloc[j]["selected_machine"]
-    ]
+    m.M_relevant = [m for j in jobs for m in machines if m in df.iloc[j]["machines"]]
 
     # dummy job can run on all machines
     compatible_assignments_dummy = compatible_assignments
@@ -275,10 +284,10 @@ def opt_schedule(df, starttime, last_tool):
     SolverFactory("cbc").solve(m).write()
 
     # Enter schedule into dataframe
-    df["setup_time"] = 0
+    df["calculated_setup_time"] = 0
     for j in m.J:
         # The resulting start is without the shifts, add the shift time back
-        shift = ShiftModel(company, shift, first_release)
+        shift = ShiftModel(company, shift_name, first_release)
         # Check if setup time was added
         setup_time = 0
         machine = ""
@@ -303,9 +312,8 @@ def opt_schedule(df, starttime, last_tool):
         df.iat[int(j), df.columns.get_loc("calculated_end")] = shift.add_time(
             (durations[j] + setup_time) / 60
         )
-        # Get chosen machine by iterating through m.z
-        df.iat[int(j), df.columns.get_loc("machine")] = machine
-        df.iat[int(j), df.columns.get_loc("setup_time")] = setup_time / 60
+        df.iat[int(j), df.columns.get_loc("selected_machine")] = machine
+        df.iat[int(j), df.columns.get_loc("calculated_setup_time")] = setup_time / 60
 
     print(
         f"Planned jobs: {amount_of_jobs}. Missed deadlines: {sum(df['calculated_end'] > df['deadline'])}"

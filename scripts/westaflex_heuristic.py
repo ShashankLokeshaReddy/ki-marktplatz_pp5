@@ -143,8 +143,8 @@ def get_orders() -> pd.DataFrame:
             "PLAN-Fertigstellungs-zeitpunkt": "planned_end",
             "IST- Bearbeitungs-beginn": "final_start",
             "IST-Fertigstellungs-zeitpunkt": "final_end",
-            "Bearbeitungsdauer": "machine_time",
-            "Dauer Handarbeit": "manual_time",
+            "Bearbeitungsdauer": "duration_machine",
+            "Dauer Handarbeit": "duration_manual",
             "Rohrtyp": "tube_type",
             "Werkzeug-nummer": "tool",
             "Rüstzeit für WKZ/Materialwechsel": "setuptime_material",
@@ -263,11 +263,11 @@ def compute_priority_list(order_df, priority_procedure: PriorityProcedure):
         order_df = order_df.sort_values(by="order_release")
         return order_df["job"].tolist()
     elif priority_procedure == PriorityProcedure.SHORTEST_OPERATION_TIME:
-        order_df = order_df.sort_values(by="machine_time")
+        order_df = order_df.sort_values(by="duration_machine")
         return order_df["job"].tolist()
     elif priority_procedure == PriorityProcedure.LONGEST_OPERATION_TIME:
-        order_df = order_df.sort_values(by="machine_time", ascending=False)
-        a = order_df["machine_time"]
+        order_df = order_df.sort_values(by="duration_machine", ascending=False)
+        a = order_df["duration_machine"]
         return order_df["job"].tolist()
     else:
         raise Exception("Unknown priority procedure: " + priority_procedure)
@@ -313,15 +313,15 @@ def compute_job_period(shift_model, order_df, start_time, job, prev_job=""):
     order = order_df.loc[order_df["job"] == job]
     setuptime_material = tool_setup_time(order_df, job, prev_job)
     setuptime_coil = order["setuptime_coil"].values[0]
-    machine_time = order["machine_time"].values[0]
-    manual_time = order["manual_time"].values[0]
+    duration_machine = order["duration_machine"].values[0]
+    duration_manual = order["duration_manual"].values[0]
 
     # compute work time
-    machine_time = machine_time - setuptime_material
-    if machine_time > manual_time:
-        work_time = setuptime_coil + setuptime_material + machine_time
+    duration_machine = duration_machine - setuptime_material
+    if duration_machine > duration_manual:
+        work_time = setuptime_coil + setuptime_material + duration_machine
     else:
-        work_time = setuptime_coil + setuptime_material + manual_time
+        work_time = setuptime_coil + setuptime_material + duration_manual
 
     (job_period_start, job_period_end) = shift_model.compute_work_period(
         start_time, work_time
@@ -350,7 +350,7 @@ def schedule_orders(
         _type_: pandas dataframe of the orders, where all orders within of planning period are planned.
     """
     # initiate machine jobs
-    order_df["machine"] = -1
+    order_df["selected_machine"] = -1
     machine_endtime = {}
     machine_last_job = {}
     for machine in (
@@ -414,7 +414,7 @@ def schedule_orders(
                 (order_df["job"] == job), "planned_start"
             ] = machine_tmp_starttime
             order_df.loc[(order_df["job"] == job), "planned_end"] = machine_tmp_endtime
-            order_df.loc[(order_df["job"] == job), "machine"] = machine_tmp_id
+            order_df.loc[(order_df["job"] == job), "selected_machine"] = machine_tmp_id
             machine_endtime[machine_tmp_id] = machine_tmp_endtime
             machine_last_job[machine_tmp_id] = job
 
@@ -454,9 +454,9 @@ order_df.rename(columns={"setuptime_material": "setup_time"}, inplace=True)
 gantt(order_df)
 
 # show machine-specific schedule
-order_df = order_df[order_df["machine"] == "1534"]
+order_df = order_df[order_df["selected_machine"] == "1534"]
 order_df = order_df.sort_values(by="planned_start")
 order_df = order_df.reset_index(drop=True)
 
 # print results to console
-print(order_df[["job", "machine", "planned_start", "planned_end"]])
+print(order_df[["job", "selected_machine", "planned_start", "planned_end"]])
