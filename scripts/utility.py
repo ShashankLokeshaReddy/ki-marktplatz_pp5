@@ -8,10 +8,9 @@ import datetime
 import pandas as pd
 
 
-def calculate_end_time(start: datetime.datetime,
-                       duration: int,
-                       company: str,
-                       shift: str) -> datetime.datetime:
+def calculate_end_time(
+    start: datetime.datetime, duration: int, company: str, shift: str
+) -> datetime.datetime:
     """
     Calculates the time a job gets finished based on the given duration.
 
@@ -43,7 +42,8 @@ def calculate_end_time(start: datetime.datetime,
         pass
     else:
         raise ValueError(
-            'start parameter needs to be of type datetime.datetime or pandas.Timestamp')
+            "start parameter needs to be of type datetime.datetime or pandas.Timestamp"
+        )
 
     shifts = ShiftModel(company, shift, start)
     # Add the duration of the job to the current shift time
@@ -60,14 +60,14 @@ def convert_str_to_datetime(date: str) -> datetime.datetime:
         return date
     if not isinstance(date, str):
         return datetime.datetime(0, 0, 0)
-    if not date or date.lower() == 'nan':
+    if not date or date.lower() == "nan":
         return datetime.datetime(0, 0, 0)
-    if not date.count('.') == 2 or len(date) != 10:
-        raise ValueError(f'{date} not expected format dd.mm.yyyy')
+    if not date.count(".") == 2 or len(date) != 10:
+        raise ValueError(f"{date} not expected format dd.mm.yyyy")
     # Turn date around to yyyy-mm-dd first
-    date = date.split('.')
+    date = date.split(".")
     if len(date[0]) == 4:
         # In format yyyy.mm.dd, so reverse list
         date.reverse()
-    swapped_date = date[2] + '-' + date[1] + '-' + date[0]
+    swapped_date = date[2] + "-" + date[1] + "-" + date[0]
     return datetime.datetime.fromisoformat(swapped_date)

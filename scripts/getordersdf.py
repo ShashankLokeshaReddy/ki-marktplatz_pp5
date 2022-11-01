@@ -12,30 +12,35 @@ import pandas as pd
 # Current script directory
 script_directory = pathlib.Path(__file__).parent.resolve()
 # Default path of the order database excel file
-default_westaflex_table_path = os.path.join(script_directory, '..', 'data',
-                                            "20220706_Auftragsdatenbank_last_10_modified.xlsm")
+default_westaflex_table_path = os.path.join(
+    script_directory, "..", "data", "20220706_Auftragsdatenbank_last_10_modified.xlsm"
+)
 
 # The returned dataframes need to have the following column names, more are ok
-common_dataframe = pd.DataFrame(columns=['job',
-                                         'order_release',
-                                         'status',
-                                         'machines',
-                                         'selected_machine',
-                                         'tool',
-                                         'setuptime',
-                                         'shift',
-                                         'duration_machine',
-                                         'duration_manual',
-                                         'deadline',
-                                         'latest_start',
-                                         'calculated_start',
-                                         'calculated_end',
-                                         'planned_start',
-                                         'planned_end',
-                                         'final_start',
-                                         'final_end'])
+common_dataframe = pd.DataFrame(
+    columns=[
+        "job",
+        "order_release",
+        "status",
+        "machines",
+        "selected_machine",
+        "tool",
+        "setuptime",
+        "shift",
+        "duration_machine",
+        "duration_manual",
+        "deadline",
+        "latest_start",
+        "calculated_start",
+        "calculated_end",
+        "planned_start",
+        "planned_end",
+        "final_start",
+        "final_end",
+    ]
+)
 # The company name has to be set as an attribute
-common_dataframe.attrs['company_name'] = ''
+common_dataframe.attrs["company_name"] = ""
 
 
 class JobStatus(Enum):
@@ -73,7 +78,7 @@ def combine_datetime_columns(df, col_name):
     df[col_name] = df[col_name].apply(get_date) + df.iloc[
         :, df.columns.get_loc(col_name) + 1
     ].astype(str)
-    df[col_name] = pd.to_datetime(df[col_name], errors='ignore')
+    df[col_name] = pd.to_datetime(df[col_name], errors="ignore")
     return df
 
 
@@ -153,24 +158,20 @@ def get_westaflex_orders(path: str = default_westaflex_table_path) -> pd.DataFra
             duration_manual, deadline, calculated_start, calculated_end,
             planned_start, planned_end, final_start, final_end
     """
-    sheet_name = 'Datenbank_Auftragsdaten'
+    sheet_name = "Datenbank_Auftragsdaten"
     order_df = pd.read_excel(path, sheet_name)  # Read file
     order_df = order_df.rename(columns=order_df.iloc[10])
     # Combine separate date time columns to datetime
+    order_df = combine_datetime_columns(order_df, "Spätester Bearbeitungsbeginn")
+    order_df = combine_datetime_columns(order_df, "spätester Fertigstellungszeitpunkt")
+    order_df = combine_datetime_columns(order_df, "Berechneter Bearbei-tungsbeginn")
     order_df = combine_datetime_columns(
-        order_df, "Spätester Bearbeitungsbeginn")
-    order_df = combine_datetime_columns(
-        order_df, "spätester Fertigstellungszeitpunkt")
-    order_df = combine_datetime_columns(
-        order_df, "Berechneter Bearbei-tungsbeginn")
-    order_df = combine_datetime_columns(
-        order_df, "Berechneter Fertigstellungs-zeitpunkt")
+        order_df, "Berechneter Fertigstellungs-zeitpunkt"
+    )
     order_df = combine_datetime_columns(order_df, "PLAN-Bearbeitungs-beginn")
-    order_df = combine_datetime_columns(
-        order_df, "PLAN-Fertigstellungs-zeitpunkt")
+    order_df = combine_datetime_columns(order_df, "PLAN-Fertigstellungs-zeitpunkt")
     order_df = combine_datetime_columns(order_df, "IST- Bearbeitungs-beginn")
-    order_df = combine_datetime_columns(
-        order_df, "IST-Fertigstellungs-zeitpunkt")
+    order_df = combine_datetime_columns(order_df, "IST-Fertigstellungs-zeitpunkt")
     # Name machine number colums appropriately
     order_df.columns.values[25] = "1531"
     order_df.columns.values[26] = "1532"
@@ -183,93 +184,87 @@ def get_westaflex_orders(path: str = default_westaflex_table_path) -> pd.DataFra
     order_df.columns.values[33] = "1542"
     order_df.columns.values[34] = "1543"
     # Combine all machine numbers into one column
-    order_df['selected_machine'] = ''
-    order_df['selected_machine'] += np.where(
-        order_df['1531'] == 'x', '1531,', '')
-    order_df['selected_machine'] += np.where(
-        order_df['1532'] == 'x', '1532,', '')
-    order_df['selected_machine'] += np.where(
-        order_df['1533'] == 'x', '1533,', '')
-    order_df['selected_machine'] += np.where(
-        order_df['1534'] == 'x', '1534,', '')
-    order_df['selected_machine'] += np.where(
-        order_df['1535'] == 'x', '1535,', '')
-    order_df['selected_machine'] += np.where(
-        order_df['1536'] == 'x', '1536,', '')
-    order_df['selected_machine'] += np.where(
-        order_df['1537'] == 'x', '1537,', '')
-    order_df['selected_machine'] += np.where(
-        order_df['1541'] == 'x', '1541,', '')
-    order_df['selected_machine'] += np.where(
-        order_df['1542'] == 'x', '1542,', '')
-    order_df['selected_machine'] += np.where(
-        order_df['1543'] == 'x', '1543', '')
+    order_df["selected_machine"] = ""
+    order_df["selected_machine"] += np.where(order_df["1531"] == "x", "1531,", "")
+    order_df["selected_machine"] += np.where(order_df["1532"] == "x", "1532,", "")
+    order_df["selected_machine"] += np.where(order_df["1533"] == "x", "1533,", "")
+    order_df["selected_machine"] += np.where(order_df["1534"] == "x", "1534,", "")
+    order_df["selected_machine"] += np.where(order_df["1535"] == "x", "1535,", "")
+    order_df["selected_machine"] += np.where(order_df["1536"] == "x", "1536,", "")
+    order_df["selected_machine"] += np.where(order_df["1537"] == "x", "1537,", "")
+    order_df["selected_machine"] += np.where(order_df["1541"] == "x", "1541,", "")
+    order_df["selected_machine"] += np.where(order_df["1542"] == "x", "1542,", "")
+    order_df["selected_machine"] += np.where(order_df["1543"] == "x", "1543", "")
 
     # Name first column to reference it for deletion
-    order_df = order_df.rename(columns={order_df.columns[0]: 'Nichts'})
-    order_df = order_df.drop('Nichts', axis=1)
+    order_df = order_df.rename(columns={order_df.columns[0]: "Nichts"})
+    order_df = order_df.drop("Nichts", axis=1)
     # Ignore first 14 rows since data starts at row 15
     order_df = order_df.drop(np.arange(13))
     order_df = order_df.reset_index(drop=True)
     # Only select the relevant columns
-    order_df = order_df[['Fertigungsauf-tragsnummer',
-                         'Artikelnummer',
-                         'Auftragseingabe-zeitpunkt',
-                         'Nummer Wickel-rohrmaschine',
-                         'selected_machine',
-                         'Werkzeug-nummer',
-                         'Rüstzeit für WKZ/Materialwechsel',
-                         'Rüstzeit für Coilwechsel',
-                         'Maschinen-laufzeit',
-                         'Dauer Handarbeit',
-                         'Schichtmodell',
-                         'spätester Fertigstellungszeitpunkt',
-                         'Spätester Bearbeitungsbeginn',
-                         'Berechneter Bearbei-tungsbeginn',
-                         'Berechneter Fertigstellungs-zeitpunkt',
-                         'PLAN-Bearbeitungs-beginn',
-                         'PLAN-Fertigstellungs-zeitpunkt',
-                         'IST- Bearbeitungs-beginn',
-                         'IST-Fertigstellungs-zeitpunkt']]
+    order_df = order_df[
+        [
+            "Fertigungsauf-tragsnummer",
+            "Artikelnummer",
+            "Auftragseingabe-zeitpunkt",
+            "Nummer Wickel-rohrmaschine",
+            "selected_machine",
+            "Werkzeug-nummer",
+            "Rüstzeit für WKZ/Materialwechsel",
+            "Rüstzeit für Coilwechsel",
+            "Maschinen-laufzeit",
+            "Dauer Handarbeit",
+            "Schichtmodell",
+            "spätester Fertigstellungszeitpunkt",
+            "Spätester Bearbeitungsbeginn",
+            "Berechneter Bearbei-tungsbeginn",
+            "Berechneter Fertigstellungs-zeitpunkt",
+            "PLAN-Bearbeitungs-beginn",
+            "PLAN-Fertigstellungs-zeitpunkt",
+            "IST- Bearbeitungs-beginn",
+            "IST-Fertigstellungs-zeitpunkt",
+        ]
+    ]
     # Rename the columns into english
-    order_df.rename(columns={'Fertigungsauf-tragsnummer': 'job',
-                             'Artikelnummer': 'item',
-                             'Auftragseingabe-zeitpunkt': 'order_release',
-                             'Nummer Wickel-rohrmaschine': 'selected_machine',
-                             'Maschinenangebot': 'machines',
-                             'Werkzeug-nummer': 'tool',
-                             'Rüstzeit für WKZ/Materialwechsel':
-                                 'setuptime_material',
-                             'Rüstzeit für Coilwechsel': 'setuptime_coil',
-                             'Maschinen-laufzeit': 'duration_machine',
-                             'Dauer Handarbeit': 'duration_manual',
-                             'Schichtmodell': 'shift',
-                             'spätester Fertigstellungszeitpunkt': 'deadline',
-                             'Spätester Bearbeitungsbeginn':
-                                 'latest_start',
-                             'Berechneter Bearbei-tungsbeginn':
-                                 'calculated_start',
-                             'Berechneter Fertigstellungs-zeitpunkt':
-                                 'calculated_end',
-                             'PLAN-Bearbeitungs-beginn':
-                                 'planned_start',
-                             'PLAN-Fertigstellungs-zeitpunkt':
-                                 'planned_end',
-                             'IST- Bearbeitungs-beginn':
-                                 'final_start',
-                             'IST-Fertigstellungs-zeitpunkt':
-                                 'final_end'},
-                    inplace=True)
-    order_df['order_release'] = pd.to_datetime(order_df['order_release'])
-    order_df['deadline'] = pd.to_datetime(order_df['deadline'])
-    order_df['duration_machine'] = order_df['duration_machine'].map(
-        lambda x: datetime.timedelta(minutes=x))
-    order_df['duration_manual'] = order_df['duration_manual'].map(
-        lambda x: datetime.timedelta(minutes=x))
-    order_df['setuptime_material'] = order_df['setuptime_material'].map(
-        lambda x: datetime.timedelta(minutes=x))
-    order_df['setuptime_coil'] = order_df['setuptime_coil'].map(
-        lambda x: datetime.timedelta(minutes=x))
+    order_df.rename(
+        columns={
+            "Fertigungsauf-tragsnummer": "job",
+            "Artikelnummer": "item",
+            "Auftragseingabe-zeitpunkt": "order_release",
+            "Nummer Wickel-rohrmaschine": "selected_machine",
+            "Maschinenangebot": "machines",
+            "Werkzeug-nummer": "tool",
+            "Rüstzeit für WKZ/Materialwechsel": "setuptime_material",
+            "Rüstzeit für Coilwechsel": "setuptime_coil",
+            "Maschinen-laufzeit": "duration_machine",
+            "Dauer Handarbeit": "duration_manual",
+            "Schichtmodell": "shift",
+            "spätester Fertigstellungszeitpunkt": "deadline",
+            "Spätester Bearbeitungsbeginn": "latest_start",
+            "Berechneter Bearbei-tungsbeginn": "calculated_start",
+            "Berechneter Fertigstellungs-zeitpunkt": "calculated_end",
+            "PLAN-Bearbeitungs-beginn": "planned_start",
+            "PLAN-Fertigstellungs-zeitpunkt": "planned_end",
+            "IST- Bearbeitungs-beginn": "final_start",
+            "IST-Fertigstellungs-zeitpunkt": "final_end",
+        },
+        inplace=True,
+    )
+    order_df["order_release"] = pd.to_datetime(order_df["order_release"])
+    order_df["deadline"] = pd.to_datetime(order_df["deadline"])
+    order_df["duration_machine"] = order_df["duration_machine"].map(
+        lambda x: datetime.timedelta(minutes=x)
+    )
+    order_df["duration_manual"] = order_df["duration_manual"].map(
+        lambda x: datetime.timedelta(minutes=x)
+    )
+    order_df["setuptime_material"] = order_df["setuptime_material"].map(
+        lambda x: datetime.timedelta(minutes=x)
+    )
+    order_df["setuptime_coil"] = order_df["setuptime_coil"].map(
+        lambda x: datetime.timedelta(minutes=x)
+    )
 
-    order_df.attrs['company_name'] = 'westaflex'
+    order_df.attrs["company_name"] = "westaflex"
     return set_order_status(order_df)

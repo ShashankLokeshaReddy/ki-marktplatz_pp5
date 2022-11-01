@@ -37,7 +37,7 @@ def calculate_setup_time(tool1: str, tool2: str) -> int:
     tool1 = str(tool1)
     tool2 = str(tool2)
     # Remove whitespaces and make case insensitive comparison
-    if tool1.casefold().replace(' ', '') == tool2.casefold().replace(' ', ''):
+    if tool1.casefold().replace(" ", "") == tool2.casefold().replace(" ", ""):
         setup_time = 0
     else:
         setup_time = 15
@@ -69,43 +69,38 @@ def naive_termination(order_df, start, last_tool):
     dataframe
         The orders with overwritten calculated_start and calculated_end.
     """
-    machines = order_df['selected_machine'].astype(int).unique()
+    machines = order_df["selected_machine"].astype(int).unique()
     order_df = order_df.assign(setup_time=0)
-    company = order_df['company_name']
+    company = order_df["company_name"]
     # Für jede Maschine
     for machine in machines:
-        df_machine = order_df[
-            order_df['selected_machine'].astype(int) == machine]
+        df_machine = order_df[order_df["selected_machine"].astype(int) == machine]
         timestamp = start
         # Entsprechend der Reihenfolge timestamps berechnen
         for index, row in df_machine.iterrows():
-            order_num = row['job']
-            shift = row['shift']
+            order_num = row["job"]
+            shift = row["shift"]
 
             # TODO: What about already running jobs? Or jobs that are finished?
-            if timestamp < row['order_release']:
-                timestamp = row['order_release']
+            if timestamp < row["order_release"]:
+                timestamp = row["order_release"]
             # Adjust timestamp to next shift start
             shifts = ShiftModel(company, shift, timestamp)
             timestamp = shifts.get_earliest_time(timestamp)
 
-            order_df.loc[order_df['job'] == order_num,
-                         ['calculated_start']] = timestamp
-            tool = row['tool']
+            order_df.loc[order_df["job"] == order_num, ["calculated_start"]] = timestamp
+            tool = row["tool"]
             setup_time = calculate_setup_time(tool, last_tool)
-            order_df.loc[order_df['job'] == order_num,
-                         ['setup_time']] = setup_time
-            prod_time = row['duration_machine']
+            order_df.loc[order_df["job"] == order_num, ["setup_time"]] = setup_time
+            prod_time = row["duration_machine"]
             if isinstance(prod_time, datetime.timedelta):
                 prod_time = prod_time.total_seconds() / 60
             runtime = prod_time - 17 + setup_time + 2
-            timestamp = utility.calculate_end_time(start=timestamp,
-                                                   duration=runtime,
-                                                   company=company,
-                                                   shift=shift)
-            order_num = row['job']
-            order_df.loc[order_df['job'] == order_num,
-                         ['calculated_end']] = timestamp
+            timestamp = utility.calculate_end_time(
+                start=timestamp, duration=runtime, company=company, shift=shift
+            )
+            order_num = row["job"]
+            order_df.loc[order_df["job"] == order_num, ["calculated_end"]] = timestamp
             last_tool = tool
     return order_df
 
@@ -121,17 +116,40 @@ if __name__ == "__main__":
     # Debugging
     df = getordersdf.get_westaflex_orders()
     df.drop(index=df.index[:180], axis=0, inplace=True)
-    df = naive_termination(df, datetime.datetime(2022, 2, 27, 6, 0, 0), 'A0')
-    print(df[['order_release', 'machines', 'selected_machine', 'shift',
-              'duration_machine', 'calculated_start', 'calculated_end',
-              'setup_time']])
+    df = naive_termination(df, datetime.datetime(2022, 2, 27, 6, 0, 0), "A0")
+    print(
+        df[
+            [
+                "order_release",
+                "machines",
+                "selected_machine",
+                "shift",
+                "duration_machine",
+                "calculated_start",
+                "calculated_end",
+                "setup_time",
+            ]
+        ]
+    )
     visualization.gantt(df)
-    df = pyomomachsched.opt_schedule(
-        df, datetime.datetime(2022, 1, 2, 0, 0, 0), 'A0')
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-        print(df[['order_release', 'tool', 'machines', 'selected_machine', 'shift',
-                  'duration_machine', 'setup_time', 'calculated_start', 'calculated_end']])
-    df.to_pickle('./pyomo_df.pkl')
-    df.to_excel('./pyomo_df.xlsx')
-    df.to_csv('./pyomo_df.csv')
+    df = pyomomachsched.opt_schedule(df, datetime.datetime(2022, 1, 2, 0, 0, 0), "A0")
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
+        print(
+            df[
+                [
+                    "order_release",
+                    "tool",
+                    "machines",
+                    "selected_machine",
+                    "shift",
+                    "duration_machine",
+                    "setup_time",
+                    "calculated_start",
+                    "calculated_end",
+                ]
+            ]
+        )
+    df.to_pickle("./pyomo_df.pkl")
+    df.to_excel("./pyomo_df.xlsx")
+    df.to_csv("./pyomo_df.csv")
     visualization.gantt(df)

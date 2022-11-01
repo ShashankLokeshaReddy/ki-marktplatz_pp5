@@ -11,7 +11,8 @@ from shift import ShiftModel
 PROJECT_PATH = pathlib.Path(__file__).parent.parent.resolve()
 # path to data source file
 DATA_SOURCE_PATH = os.path.join(
-    PROJECT_PATH, "data", "20220706_Auftragsdatenbank_last_10_modified.xlsm")
+    PROJECT_PATH, "data", "20220706_Auftragsdatenbank_last_10_modified.xlsm"
+)
 # sheet of source file containing database
 DATA_SOURCE_SHEET = "Datenbank_Auftragsdaten"
 
@@ -75,21 +76,16 @@ def get_orders() -> pd.DataFrame:
     order_df = order_df.drop(np.arange(13))
     order_df = order_df.reset_index(drop=True)
     # Combine separate date time columns to datetime
-    order_df = combine_datetime_columns(
-        order_df, "Spätester Bearbeitungsbeginn")
-    order_df = combine_datetime_columns(
-        order_df, "spätester Fertigstellungszeitpunkt")
-    order_df = combine_datetime_columns(
-        order_df, "Berechneter Bearbei-tungsbeginn")
+    order_df = combine_datetime_columns(order_df, "Spätester Bearbeitungsbeginn")
+    order_df = combine_datetime_columns(order_df, "spätester Fertigstellungszeitpunkt")
+    order_df = combine_datetime_columns(order_df, "Berechneter Bearbei-tungsbeginn")
     order_df = combine_datetime_columns(
         order_df, "Berechneter Fertigstellungs-zeitpunkt"
     )
     order_df = combine_datetime_columns(order_df, "PLAN-Bearbeitungs-beginn")
-    order_df = combine_datetime_columns(
-        order_df, "PLAN-Fertigstellungs-zeitpunkt")
+    order_df = combine_datetime_columns(order_df, "PLAN-Fertigstellungs-zeitpunkt")
     order_df = combine_datetime_columns(order_df, "IST- Bearbeitungs-beginn")
-    order_df = combine_datetime_columns(
-        order_df, "IST-Fertigstellungs-zeitpunkt")
+    order_df = combine_datetime_columns(order_df, "IST-Fertigstellungs-zeitpunkt")
     # Name machine number colums appropriately
     order_df.columns.values[25] = "1531"
     order_df.columns.values[26] = "1532"
@@ -417,8 +413,7 @@ def schedule_orders(
             order_df.loc[
                 (order_df["job"] == job), "planned_start"
             ] = machine_tmp_starttime
-            order_df.loc[(order_df["job"] == job),
-                         "planned_end"] = machine_tmp_endtime
+            order_df.loc[(order_df["job"] == job), "planned_end"] = machine_tmp_endtime
             order_df.loc[(order_df["job"] == job), "machine"] = machine_tmp_id
             machine_endtime[machine_tmp_id] = machine_tmp_endtime
             machine_last_job[machine_tmp_id] = job
@@ -427,13 +422,11 @@ def schedule_orders(
 
 
 # scheduling parameters
-planning_period_start = datetime.datetime(
-    2022, 3, 16, 8, 0, 0)  # 02.05.2020 0:00:00
-planning_period_end = datetime.datetime(
-    2022, 5, 8, 23, 59, 59)  # 08.05.22 23:59:59
+planning_period_start = datetime.datetime(2022, 3, 16, 8, 0, 0)  # 02.05.2020 0:00:00
+planning_period_end = datetime.datetime(2022, 5, 8, 23, 59, 59)  # 08.05.22 23:59:59
 priority_procedure = PriorityProcedure.FIRST_COME_FIRST_SERVE
 shift_model_type = "W01S3"
-company_name = 'westaflex'
+company_name = "westaflex"
 
 shift_model = ShiftModel(company_name, shift_model_type, planning_period_start)
 order_df = get_orders()
@@ -453,8 +446,7 @@ order_df = schedule_orders(
 
 # filter for planned jobs within the planning period
 order_df = order_df[
-    (pd.notnull(order_df["planned_start"])) & (
-        pd.notnull(order_df["planned_end"]))
+    (pd.notnull(order_df["planned_start"])) & (pd.notnull(order_df["planned_end"]))
 ]
 
 # visualize orders as gantt chart
@@ -463,7 +455,7 @@ gantt(order_df)
 
 # show machine-specific schedule
 order_df = order_df[order_df["machine"] == "1534"]
-order_df = order_df.sort_values(by='planned_start')
+order_df = order_df.sort_values(by="planned_start")
 order_df = order_df.reset_index(drop=True)
 
 # print results to console
