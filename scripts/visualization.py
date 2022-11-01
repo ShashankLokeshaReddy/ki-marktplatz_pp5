@@ -57,8 +57,9 @@ def gantt(order_df):
              verticalalignment='bottom', horizontalalignment='left',
              transform=axs.transAxes,
              color='black', fontsize=15)
-    shift = ShiftModel(datetime.datetime(2022, 3, 6),
-                       shift_name)
+    # TODO: temporary solution, company name needs to be in the order_df
+    company = 'westaflex'
+    shift = ShiftModel(company, shift_name)
     shift_intervals = []
     if order_df['calculated_end'].max().date() < order_df['deadline'].max().to_pydatetime().date():
         end = order_df['deadline'].max().to_pydatetime().date()
@@ -138,8 +139,7 @@ def gantt(order_df):
     fig, axs = plt.subplots(figsize=(12, 5))
     # Shift downtimes as gray bars
     # TODO: Put into own function
-    shift = ShiftModel(datetime.datetime(2022, 3, 6),
-                       shift_name)
+    shift = ShiftModel(company, shift_name)
     shift_intervals = []
     for day in pd.date_range(start=order_df['order_release'].min().to_pydatetime().date(),
                              end=end).strftime('%Y-%m-%d').tolist():

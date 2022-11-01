@@ -10,6 +10,7 @@ import pandas as pd
 
 def calculate_end_time(start: datetime.datetime,
                        duration: int,
+                       company: int,
                        shift: str) -> datetime.datetime:
     """
     Calculates the time a job gets finished based on the given duration.
@@ -24,6 +25,8 @@ def calculate_end_time(start: datetime.datetime,
         The start time of the job.
     duration : int
         The duration of the job in minutes.
+    company : str
+        The company name from which to take the shift model.
     shift : str
         The shift model determines which hours are available for work.
         Possible shift models are:
@@ -42,7 +45,7 @@ def calculate_end_time(start: datetime.datetime,
         raise ValueError(
             'start parameter needs to be of type datetime.datetime or pandas.Timestamp')
 
-    shifts = ShiftModel(start, shift)
+    shifts = ShiftModel(company, shift, start)
     # Add the duration of the job to the current shift time
     current_shift_time = shifts.add_time(datetime.timedelta(minutes=duration))
 

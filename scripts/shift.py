@@ -1,151 +1,84 @@
+# TODO: take into consideration when end time reaches next year
+
 import datetime
+import pathlib
+import os
+import pandas as pd
+
+
+# Current script directory
+script_directory = pathlib.Path(__file__).parent.resolve()
+# Default path of the shifts tables
+default_shifts_path = os.path.join(script_directory, '..', 'data')
 
 
 class ShiftModel:
     """Handles shift times and holidays of a company.
     """
 
-    def __init__(self, current_shift_time, shift):
-        # TODO: This is just a temporary solution, the values should be read from somewhere else
-        # TODO: Move this data structure somewhere else, so it does not have to be loaded with each instantiation
-        # Time intervals of each shift model. 0:=Monday, 1:=Tuesday, and so on.
-        self.shifts = {'FLEX': {0: [[datetime.time(6, 0), datetime.time(12, 30)],
-                                    [datetime.time(13, 0), datetime.time(15, 00)]],
-                                1: [[datetime.time(6, 0), datetime.time(12, 30)],
-                                    [datetime.time(13, 0), datetime.time(15, 00)]],
-                                2: [[datetime.time(6, 0), datetime.time(12, 30)],
-                                    [datetime.time(13, 0), datetime.time(15, 00)]],
-                                3: [[datetime.time(6, 0), datetime.time(12, 30)],
-                                    [datetime.time(13, 0), datetime.time(15, 00)]],
-                                4: [[datetime.time(6, 0), datetime.time(12, 30)],
-                                    [datetime.time(13, 0), datetime.time(13, 45)]],
-                                5: [[datetime.time(0, 0), datetime.time(0, 0)]],
-                                6: [[datetime.time(0, 0), datetime.time(0, 0)]]},
-                       'FLEXS': {0: [[datetime.time(15, 0), datetime.time(19, 0)],
-                                     [datetime.time(19, 30), datetime.time(23, 45)]],
-                                 1: [[datetime.time(15, 0), datetime.time(19, 0)],
-                                     [datetime.time(19, 30), datetime.time(23, 45)]],
-                                 2: [[datetime.time(15, 0), datetime.time(19, 0)],
-                                     [datetime.time(19, 30), datetime.time(23, 45)]],
-                                 3: [[datetime.time(15, 0), datetime.time(19, 0)],
-                                     [datetime.time(19, 30), datetime.time(23, 45)]],
-                                 4: [[datetime.time(14, 0), datetime.time(19, 0)],
-                                     [datetime.time(19, 30), datetime.time(23, 30)]],
-                                 5: [[datetime.time(0, 0), datetime.time(0, 0)]],
-                                 6: [[datetime.time(0, 0), datetime.time(0, 0)]]},
-                       'FLEX+S': {0: [[datetime.time(6, 0), datetime.time(12, 30)],
-                                      [datetime.time(13, 0),
-                                       datetime.time(15, 0)],
-                                      [datetime.time(15, 0),
-                                       datetime.time(19, 0)],
-                                      [datetime.time(19, 30), datetime.time(23, 45)]],
-                                  1: [[datetime.time(6, 0), datetime.time(12, 30)],
-                                      [datetime.time(13, 0),
-                                       datetime.time(15, 0)],
-                                      [datetime.time(15, 0),
-                                      datetime.time(19, 0)],
-                                      [datetime.time(19, 30), datetime.time(23, 45)]],
-                                  2: [[datetime.time(6, 0), datetime.time(12, 30)],
-                                      [datetime.time(13, 0),
-                                       datetime.time(15, 0)],
-                                      [datetime.time(15, 0),
-                                      datetime.time(19, 0)],
-                                      [datetime.time(19, 30), datetime.time(23, 45)]],
-                                  3: [[datetime.time(6, 0), datetime.time(12, 30)],
-                                      [datetime.time(13, 0),
-                                       datetime.time(15, 0)],
-                                      [datetime.time(15, 0),
-                                      datetime.time(19, 0)],
-                                      [datetime.time(19, 30), datetime.time(23, 45)]],
-                                  4: [[datetime.time(6, 0), datetime.time(12, 30)],
-                                      [datetime.time(13, 0),
-                                       datetime.time(13, 45)],
-                                      [datetime.time(14, 0),
-                                      datetime.time(19, 0)],
-                                      [datetime.time(19, 30), datetime.time(23, 30)]],
-                                  5: [[datetime.time(0, 0), datetime.time(0, 0)]],
-                                  6: [[datetime.time(0, 0), datetime.time(0, 0)]]},
-                       'W01S1': {0: [[datetime.time(6, 0), datetime.time(14, 5)],
-                                     [datetime.time(14, 10), datetime.time(22, 15)]],
-                                 1: [[datetime.time(6, 0), datetime.time(14, 5)],
-                                     [datetime.time(14, 10), datetime.time(22, 15)]],
-                                 2: [[datetime.time(6, 0), datetime.time(14, 5)],
-                                     [datetime.time(14, 10), datetime.time(22, 15)]],
-                                 3: [[datetime.time(6, 0), datetime.time(14, 5)],
-                                     [datetime.time(14, 10), datetime.time(22, 15)]],
-                                 4: [[datetime.time(6, 0), datetime.time(11, 25)],
-                                     [datetime.time(11, 30), datetime.time(16, 45)]],
-                                 5: [[datetime.time(0, 0), datetime.time(0, 0)]],
-                                 6: [[datetime.time(0, 0), datetime.time(0, 0)]]},
-                       'W01S3': {0: [[datetime.time(6, 0), datetime.time(23, 55)]],
-                                 1: [[datetime.time(0, 0), datetime.time(23, 55)]],
-                                 2: [[datetime.time(0, 0), datetime.time(23, 55)]],
-                                 3: [[datetime.time(0, 0), datetime.time(23, 55)]],
-                                 4: [[datetime.time(0, 0), datetime.time(23, 55)]],
-                                 5: [[datetime.time(0, 0), datetime.time(6, 15)]],
-                                 6: [[datetime.time(0, 0), datetime.time(0, 0)]]},
-                       'W01YL': {0: [[datetime.time(6, 0), datetime.time(21, 45)]],
-                                 1: [[datetime.time(6, 0), datetime.time(21, 45)]],
-                                 2: [[datetime.time(6, 0), datetime.time(21, 45)]],
-                                 3: [[datetime.time(6, 0), datetime.time(21, 45)]],
-                                 4: [[datetime.time(6, 0), datetime.time(21, 45)]],
-                                 5: [[datetime.time(0, 0), datetime.time(0, 0)]],
-                                 6: [[datetime.time(0, 0), datetime.time(0, 0)]]},
-                       'W011': {0: [[datetime.time(6, 0), datetime.time(9, 0)],
-                                    [datetime.time(9, 15),
-                                     datetime.time(12, 30)],
-                                    [datetime.time(13, 0), datetime.time(17, 30)]],
-                                1: [[datetime.time(6, 0), datetime.time(9, 0)],
-                                    [datetime.time(9, 15),
-                                    datetime.time(12, 30)],
-                                    [datetime.time(13, 0), datetime.time(17, 30)]],
-                                2: [[datetime.time(6, 0), datetime.time(9, 0)],
-                                    [datetime.time(9, 15),
-                                    datetime.time(12, 30)],
-                                    [datetime.time(13, 0), datetime.time(17, 30)]],
-                                3: [[datetime.time(6, 0), datetime.time(9, 0)],
-                                    [datetime.time(9, 15),
-                                    datetime.time(12, 30)],
-                                    [datetime.time(13, 0), datetime.time(17, 30)]],
-                                4: [[datetime.time(6, 0), datetime.time(9, 0)],
-                                    [datetime.time(9, 15), datetime.time(13, 0)]],
-                                5: [[datetime.time(0, 0), datetime.time(0, 0)]],
-                                6: [[datetime.time(0, 0), datetime.time(0, 0)]]}
-                       }
-        self.company_holidays = [datetime.date(2022, 1, 1),
-                                 datetime.date(2022, 4, 15),
-                                 datetime.date(2022, 4, 16),
-                                 datetime.date(2022, 4, 17),
-                                 datetime.date(2022, 4, 18),
-                                 datetime.date(2022, 5, 1),
-                                 datetime.date(2022, 5, 26),
-                                 datetime.date(2022, 5, 27),
-                                 datetime.date(2022, 5, 28),
-                                 datetime.date(2022, 6, 5),
-                                 datetime.date(2022, 6, 6),
-                                 datetime.date(2022, 6, 16),
-                                 datetime.date(2022, 6, 17),
-                                 datetime.date(2022, 6, 18),
-                                 datetime.date(2022, 10, 3),
-                                 datetime.date(2022, 10, 31),
-                                 datetime.date(2022, 11, 1),
-                                 datetime.date(2022, 12, 24),
-                                 datetime.date(2022, 12, 25),
-                                 datetime.date(2022, 12, 26),
-                                 datetime.date(2022, 12, 27),
-                                 datetime.date(2022, 12, 28),
-                                 datetime.date(2022, 12, 29),
-                                 datetime.date(2022, 12, 30),
-                                 datetime.date(2022, 12, 31),
-                                 ]
-        if shift.lower() not in [i.lower() for i in self.get_shift_names()]:
+    def __init__(self, name, shift_name, current_shift_time=datetime.datetime(2022, 1, 1)):
+        try:
+            self.shifts = self.read_shifts_csv(name)
+        except OSError as exc:
+            raise OSError(f'A shifts table for {name} does not exist') from exc
+        try:
+            self.company_holidays = self.read_holidays_csv(name)
+        except OSError as exc:
+            raise OSError(
+                f'A holidays table for {name} does not exist') from exc
+        if not self.shifts['shift'].str.contains(shift_name).any():
             raise ValueError(
-                f'Object instantiation failed, since "{shift}" is not' +
+                f'Object instantiation failed, since "{shift_name}" is not' +
                 ' a supported shift model.')
-        self.shift = shift.upper()
+        self.shift_name = shift_name.upper()
         # Set current shift time to the first hour of the next shift day if it
         # is outside the working hours
         self.current_shift_time = self.get_earliest_time(current_shift_time)
+
+    def read_shifts_csv(self, name: str) -> pd.DataFrame:
+        """Reads the csv containing the shift times and returns it as dataframe
+
+        Args:
+            name (str): the name of the csv file to read
+        """
+        name.replace('shifts_', '')
+        name.replace('.csv', '')
+
+        def str_interval_to_datetime_interval(interval):
+            # transforms the HH:MM-HH:MM string interval into a datetime interval
+            if isinstance(interval, str):
+                return [datetime.datetime.strptime(
+                        str(interval).split('-')[0], '%H:%M').time(),
+                        datetime.datetime.strptime(str(interval).split('-')[1], '%H:%M').time()]
+            else:
+                return None
+
+        csv_path = os.path.join(default_shifts_path, 'shifts_' + name + '.csv')
+        if os.path.exists(csv_path):
+            shift_df = pd.read_csv(csv_path)
+            for i in range(6):
+                shift_df.loc[:, 'interval' + str(i)] = shift_df['interval' +
+                                                                str(i)].apply(str_interval_to_datetime_interval)
+            return shift_df
+
+        raise OSError(f"Following path was not found: {csv_path}.")
+
+    def read_holidays_csv(self, name: str) -> list:
+        """Reads the csv containing the company holidays and returns it as list
+
+        Args:
+            name (str): the name of the csv file to read
+        """
+        name.replace('holidays_', '')
+        name.replace('.csv', '')
+
+        csv_path = os.path.join(default_shifts_path,
+                                'holidays_' + name + '.csv')
+        if os.path.exists(csv_path):
+            holidays_df = pd.read_csv(csv_path)
+            # Transform all strings of the table into datetime objects
+            return holidays_df['date'].apply(lambda x: datetime.datetime.strptime(str(x), '%Y-%m-%d').date()).to_list()
+        raise OSError(f"Following path was not found: {csv_path}.")
 
     def compute_work_period(self, start_time, work_time: float):
         """Compute the work period based on the shift model for a given start datetime and a work time.
@@ -163,8 +96,10 @@ class ShiftModel:
             round((work_time - int(work_time)) * 60)
 
         while work_time:
-            day_shift = self.shifts[self.shift][current_datetime.weekday()]
-            for interval in day_shift:
+            #day_shift = self.shifts[self.shift_name][current_datetime.weekday()]
+            day_shift = self.shifts.loc[(self.shifts['shift'] == self.shift_name) &
+                                        (self.shifts['weekday'] == current_datetime.weekday()), 'interval0':'interval5'].values[0]
+            for interval in day_shift[day_shift != None]:
                 # Correct current time to be in an interval of the shift model
                 current_datetime = self.get_earliest_time(current_datetime)
 
@@ -219,8 +154,10 @@ class ShiftModel:
             # Check if current time is actually during a shift timeframe
             current_time = self.get_earliest_time(
                 current_time)
-            day_shift = self.shifts[self.shift][current_time.weekday()]
-            for interval in day_shift:
+            # day_shift = self.shifts[self.shift_name][current_time.weekday()]
+            day_shift = self.shifts.loc[(self.shifts['shift'] == self.shift_name) &
+                                        (self.shifts['weekday'] == current_time.weekday()), 'interval0':'interval5'].values[0]
+            for interval in day_shift[day_shift != None]:
                 shift_end = datetime.datetime.combine(current_time.date(),
                                                       interval[1])
                 if current_time > shift_end:
@@ -268,9 +205,10 @@ class ShiftModel:
             self.current_shift_time)
 
         while working_time:
-            day_shift = self.shifts[self.shift][self.current_shift_time.weekday(
-            )]
-            for interval in day_shift:
+            #day_shift = self.shifts[self.shift_name][self.current_shift_time.weekday()]
+            day_shift = self.shifts.loc[(self.shifts['shift'] == self.shift_name) &
+                                        (self.shifts['weekday'] == self.current_shift_time.weekday()), 'interval0':'interval5'].values[0]
+            for interval in day_shift[day_shift != None]:
                 shift_end = datetime.datetime.combine(self.current_shift_time.date(),
                                                       interval[1])
                 if self.current_shift_time > shift_end:
@@ -301,9 +239,9 @@ class ShiftModel:
         return self.current_shift_time
 
     def get_shift_names(self):
-        """Returns the names of all available shifts as list of strings.
+        """Returns the names of all available shifts as set of strings.
         """
-        return list(self.shifts.keys())
+        return set(self.shifts['shift'].to_list())
 
     def get_holidays(self):
         """Returns the holidays as a list.
@@ -331,7 +269,9 @@ class ShiftModel:
         weekday = start.weekday()
         # Iterate through all time intervals of the day and check whether
         # the start time lies in one of those intervals
-        for interval in self.shifts[self.shift][weekday]:
+        day_shift = self.shifts.loc[(self.shifts['shift'] == self.shift_name) &
+                                    (self.shifts['weekday'] == weekday), 'interval0':'interval5'].values[0]
+        for interval in day_shift[day_shift != None]:
             if interval[0] <= start.time() < interval[1]:
                 # The start time lies between the working hours of the shift
                 return start
@@ -344,7 +284,8 @@ class ShiftModel:
         # The start time does not lie in the working hours of the shift day
         # return the next available day
         # TODO: Check end of year, to jump to next year
-        temp_interval = self.shifts[self.shift][(weekday + 1) % 6][0]
+        temp_interval = self.shifts.loc[(self.shifts['shift'] == self.shift_name) &
+                                        (self.shifts['weekday'] == (weekday + 1) % 6), 'interval0'].values[0]
         start = datetime.datetime(start.year, start.month, start.day,
                                   temp_interval[0].hour,
                                   temp_interval[0].minute,
@@ -354,9 +295,9 @@ class ShiftModel:
         return self.get_earliest_time(start)
 
 
-# Unit tests
+# tests
 if __name__ == "__main__":
-    shift = ShiftModel(datetime.datetime(2022, 6, 3), 'FLEX')
+    shift = ShiftModel('westaflex', 'FLEX', datetime.datetime(2022, 6, 3))
     print(
         f"2 hours between 2 days test:\nExpected: {7200.0}, actual: {shift.count_time(datetime.datetime(2022, 6, 7, 14, 0, 0), datetime.datetime(2022, 6, 8, 7, 0, 0))}")
     print(
@@ -367,8 +308,12 @@ if __name__ == "__main__":
         f"Skip holidays test:\nExpected: {7200.0}, actual: {shift.count_time(datetime.datetime(2022, 6, 15, 14, 0, 0), datetime.datetime(2022, 6, 20, 7, 0, 0))}")
     print(
         f"Get earliest time test:\nExpected: 2022-06-07 06:00:00, actual: {shift.get_earliest_time(datetime.datetime(2022, 6, 7))}")
-    shift = ShiftModel(datetime.datetime(2022, 3, 9), 'W01S3')
+    shift = ShiftModel('westaflex', 'W01S3', datetime.datetime(2022, 3, 9))
     time_in_shift = shift.count_time(datetime.datetime(
         2022, 3, 9), datetime.datetime(2022, 3, 21))
     print(
         f"Time in shift calculation test:\nExpected: 2022-03-21, actual: {shift.add_time(time_in_shift / 60)}")
+
+    # shifts_df = shift.read_shifts_csv('westaflex')
+    # shifts_df.to_csv('shifts_westaflex.csv')
+    # print(shifts_df[['shift', 'weekday', 'interval0', 'interval1']])

@@ -37,6 +37,7 @@ def opt_schedule(df, starttime, last_tool):
     # TODO: generalize machines instead of hard coding them
     machines = ['1531', '1532', '1533', '1534',
                 '1535', '1536', '1537', '1541', '1542', '1543']
+    company = 'westaflex'  # TODO: temporary solution
     amount_of_jobs = len(df.index)
     jobs = range(amount_of_jobs)
     # All datetime values throughout this function need to be
@@ -61,14 +62,12 @@ def opt_schedule(df, starttime, last_tool):
     # shift = 'FLEX'
     for job_id in jobs:
         # Move release times based on total time in the shift
-        shift = ShiftModel(
-            first_release, shift)
+        shift = ShiftModel(company, shift, first_release)
         # Get earliest time the job can be worked on
         releases[job_id] = first_release.timestamp() + shift.count_time(
             first_release, df.iloc[job_id]['order_release'])
         # Strip non-shift time from job duration and adjust deadline accordingly
-        shift = ShiftModel(
-            df.iloc[job_id]['order_release'], shift)
+        shift = ShiftModel(company, shift, df.iloc[job_id]['order_release'])
         deadlines[job_id] = releases[job_id] + shift.count_time(
             df.iloc[job_id]['order_release'], df.iloc[job_id]['deadline'])
 
@@ -186,7 +185,7 @@ def opt_schedule(df, starttime, last_tool):
     df['setup_time'] = 0
     for j in m.J:
         # The resulting start is without the shifts, add the shift time back
-        shift = ShiftModel(first_release, shift)
+        shift = ShiftModel(company, shift, first_release)
         # Check if setup time was added
         setup_time = 0
         machine = ''

@@ -46,7 +46,7 @@ def calculate_setup_time(tool1: str, tool2: str) -> int:
 
 # TODO: Rüstzeit erste Maschine?
 # TODO: Startzeit current time?
-def naive_termination(order_df, start, last_tool):
+def naive_termination(order_df, company, start, last_tool):
     """
     Calculates a simple termination from the given orders and returns it.
 
@@ -86,7 +86,7 @@ def naive_termination(order_df, start, last_tool):
             if timestamp < row['order_release']:
                 timestamp = row['order_release']
             # Adjust timestamp to next shift start
-            shifts = ShiftModel(timestamp, shift)
+            shifts = ShiftModel(company, shift, timestamp)
             timestamp = shifts.get_earliest_time(timestamp)
 
             order_df.loc[order_df['job'] == order_num,
@@ -101,6 +101,7 @@ def naive_termination(order_df, start, last_tool):
             runtime = prod_time - 17 + setup_time + 2
             timestamp = utility.calculate_end_time(start=timestamp,
                                                    duration=runtime,
+                                                   company=company,
                                                    shift=shift)
             order_num = row['job']
             order_df.loc[order_df['job'] == order_num,
@@ -120,7 +121,8 @@ if __name__ == "__main__":
     # Debugging
     df = getordersdf.get_westaflex_orders()
     df.drop(index=df.index[:180], axis=0, inplace=True)
-    df = naive_termination(df, datetime.datetime(2022, 2, 27, 6, 0, 0), 'A0')
+    df = naive_termination(
+        df, 'westaflex', datetime.datetime(2022, 2, 27, 6, 0, 0), 'A0')
     print(df[['order_release', 'machines', 'selected_machine', 'shift',
               'duration_machine', 'calculated_start', 'calculated_end',
               'setup_time']])

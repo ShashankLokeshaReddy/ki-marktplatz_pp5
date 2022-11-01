@@ -433,8 +433,9 @@ planning_period_end = datetime.datetime(
     2022, 5, 8, 23, 59, 59)  # 08.05.22 23:59:59
 priority_procedure = PriorityProcedure.FIRST_COME_FIRST_SERVE
 shift_model_type = "W01S3"
+company_name = 'westaflex'
 
-shift_model = ShiftModel(planning_period_start, shift_model_type)
+shift_model = ShiftModel(company_name, shift_model_type, planning_period_start)
 order_df = get_orders()
 order_df.drop(index=order_df.index[:180], axis=0, inplace=True)
 order_df = filter_orders(order_df, planning_period_start, planning_period_end)
