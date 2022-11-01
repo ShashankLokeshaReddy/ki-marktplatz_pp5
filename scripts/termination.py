@@ -46,7 +46,7 @@ def calculate_setup_time(tool1: str, tool2: str) -> int:
 
 # TODO: Rüstzeit erste Maschine?
 # TODO: Startzeit current time?
-def naive_termination(order_df, company, start, last_tool):
+def naive_termination(order_df, start, last_tool):
     """
     Calculates a simple termination from the given orders and returns it.
 
@@ -69,9 +69,9 @@ def naive_termination(order_df, company, start, last_tool):
     dataframe
         The orders with overwritten calculated_start and calculated_end.
     """
-    # TODO: Currently, setup time gets added but it should be subtracted
     machines = order_df['selected_machine'].astype(int).unique()
     order_df = order_df.assign(setup_time=0)
+    company = order_df['company_name']
     # Für jede Maschine
     for machine in machines:
         df_machine = order_df[
@@ -121,8 +121,7 @@ if __name__ == "__main__":
     # Debugging
     df = getordersdf.get_westaflex_orders()
     df.drop(index=df.index[:180], axis=0, inplace=True)
-    df = naive_termination(
-        df, 'westaflex', datetime.datetime(2022, 2, 27, 6, 0, 0), 'A0')
+    df = naive_termination(df, datetime.datetime(2022, 2, 27, 6, 0, 0), 'A0')
     print(df[['order_release', 'machines', 'selected_machine', 'shift',
               'duration_machine', 'calculated_start', 'calculated_end',
               'setup_time']])

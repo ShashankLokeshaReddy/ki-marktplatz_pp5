@@ -34,6 +34,8 @@ common_dataframe = pd.DataFrame(columns=['job',
                                          'planned_end',
                                          'final_start',
                                          'final_end'])
+# The company name has to be set as an attribute
+common_dataframe.attrs['company_name'] = ''
 
 
 class JobStatus(Enum):
@@ -268,4 +270,6 @@ def get_westaflex_orders(path: str = default_westaflex_table_path) -> pd.DataFra
         lambda x: datetime.timedelta(minutes=x))
     order_df['setuptime_coil'] = order_df['setuptime_coil'].map(
         lambda x: datetime.timedelta(minutes=x))
+
+    order_df.attrs['company_name'] = 'westaflex'
     return set_order_status(order_df)

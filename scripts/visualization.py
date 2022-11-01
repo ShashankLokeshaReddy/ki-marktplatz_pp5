@@ -58,7 +58,7 @@ def gantt(order_df):
              transform=axs.transAxes,
              color='black', fontsize=15)
     # TODO: temporary solution, company name needs to be in the order_df
-    company = 'westaflex'
+    company = order_df.attrs['company_name']
     shift = ShiftModel(company, shift_name)
     shift_intervals = []
     if order_df['calculated_end'].max().date() < order_df['deadline'].max().to_pydatetime().date():

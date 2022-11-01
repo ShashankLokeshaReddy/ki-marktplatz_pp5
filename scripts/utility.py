@@ -10,7 +10,7 @@ import pandas as pd
 
 def calculate_end_time(start: datetime.datetime,
                        duration: int,
-                       company: int,
+                       company: str,
                        shift: str) -> datetime.datetime:
     """
     Calculates the time a job gets finished based on the given duration.

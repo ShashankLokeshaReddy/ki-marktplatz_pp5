@@ -37,7 +37,7 @@ def opt_schedule(df, starttime, last_tool):
     # TODO: generalize machines instead of hard coding them
     machines = ['1531', '1532', '1533', '1534',
                 '1535', '1536', '1537', '1541', '1542', '1543']
-    company = 'westaflex'  # TODO: temporary solution
+    company = df.attrs['company_name']
     amount_of_jobs = len(df.index)
     jobs = range(amount_of_jobs)
     # All datetime values throughout this function need to be
