@@ -44,7 +44,8 @@ def get_date(datetime_object):
 
 
 def combine_datetime_columns(df, col_name):
-    """Combines two columns into one datetime column, where one column contains the date and one column contains the time.
+    """Combines two columns into one datetime column,
+    where one column contains the date and one column contains the time.
     The date column is assumed to be in the col_name column and time is in the directly following column.
     The result will be stored in the col_name column.
 
@@ -337,7 +338,8 @@ def schedule_orders(
     planning_period_start,
     planning_period_end,
 ):
-    """Schedule the orders according to their priority to the available machines. Add planning information to dataframe.
+    """Schedule the orders according to their priority to the available machines.
+    Add planning information to dataframe.
 
     Args:
         order_df (_type_): pandas dataframe containing the orders

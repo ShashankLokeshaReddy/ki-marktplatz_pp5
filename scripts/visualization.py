@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 from adjustText import adjust_text
-from IPython.display import display
 import pandas as pd
 
 import datetime

@@ -7,9 +7,6 @@ import getordersdf
 
 # Third party libraries
 import datetime
-import os
-import pathlib
-import numpy as np
 import pandas as pd
 
 
@@ -116,7 +113,7 @@ if __name__ == "__main__":
         ]
     )
     visualization.gantt(df)
-    df = pyomomachsched.opt_schedule(df, datetime.datetime(2022, 1, 2, 0, 0, 0), "A0")
+    df = pyomomachsched.opt_schedule(df, datetime.datetime(2022, 1, 2, 0, 0, 0))
     with pd.option_context("display.max_rows", None, "display.max_columns", None):
         print(
             df[

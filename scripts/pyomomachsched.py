@@ -1,17 +1,9 @@
-from multiprocessing.sharedctypes import Value
-from sqlite3 import Timestamp
 import pandas as pd
 
-import matplotlib.pyplot as plt
-import shutil
-import sys
-import os.path
 import datetime
-import logging
 
 from pyomo.environ import *
 from pyomo.gdp import *
-from pyomo.util.infeasible import log_infeasible_constraints
 
 from shift import ShiftModel
 
@@ -22,7 +14,7 @@ from shift import ShiftModel
 # TODO: Bug where each job begins one hour later (conversion between seconds and datetime?)
 
 
-def opt_schedule(df, starttime, last_tool):
+def opt_schedule(df, starttime, missed_deadline_punish=5):
     """Optimizes a schedule using an optimizer and returns it as dataframe.
 
     Model taken from https://ojs.aaai.org/index.php/ICAPS/article/view/13596/13445
@@ -175,6 +167,8 @@ def opt_schedule(df, starttime, last_tool):
     m.completion = Var(m.J_dummy, domain=NonNegativeReals)
     m.completion_machine = Var(m.M, domain=NonNegativeReals)
     m.makespan = Var(bounds=(0, 2000000000))
+    m.pastdue = Var(m.J, bounds=(0, 2000000000))
+    m.early = Var(m.J, bounds=(0, 2000000000))
 
     # binary matrix whether job j is scheduled before job k on machine m
     m.x = Var(m.MACH_PAIRS, domain=Binary)
@@ -184,8 +178,13 @@ def opt_schedule(df, starttime, last_tool):
     # very large value for constraint c6
     big_m = max(releases) + sum(durations.values())
 
-    # Objective
-    m.OBJ = Objective(expr=m.makespan, sense=minimize)
+    # Objective. Additionally to makespan, also considers deadlines (pastdue)
+    m.OBJ = Objective(
+        expr=sum(m.pastdue[j] for j in m.J) * missed_deadline_punish
+        + m.makespan
+        - sum(m.early[j] for j in m.J),
+        sense=minimize,
+    )
 
     # define makespan
     m.c0 = Constraint(m.J, rule=lambda m, j: m.completion[j] <= m.makespan)
@@ -280,6 +279,17 @@ def opt_schedule(df, starttime, last_tool):
     m.c8 = Constraint(
         m.M, rule=lambda m, mach: m.completion_machine[mach] <= m.makespan
     )
+
+    # defines early and pastdue
+    m.c9 = Constraint(
+        m.J,
+        rule=lambda m, j: m.completion[j] + m.early[j] == deadlines[j] + m.pastdue[j],
+    )
+    m.d1 = Disjunction(m.J, rule=lambda m, j: [m.early[j] == 0, m.pastdue[j] == 0])
+
+    # apply gdp.hull to allow disjunctions
+    transform = TransformationFactory("gdp.hull")
+    transform.apply_to(m)
 
     SolverFactory("cbc").solve(m).write()
 

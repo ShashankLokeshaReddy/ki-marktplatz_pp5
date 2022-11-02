@@ -28,8 +28,8 @@ class ShiftModel:
             raise OSError(f"A holidays table for {name} does not exist") from exc
         if not self.shifts["shift"].apply(lambda x: str(x).lower()).str.contains(shift_name.lower()).any():
             raise ValueError(
-                f'Object instantiation failed, since "{shift_name}" is not'
-                + " a supported shift model."
+                f'Object instantiation failed, since "{shift_name}" is not' +
+                " a supported shift model."
             )
         self.shift_name = shift_name.upper()
         # Set current shift time to the first hour of the next shift day if it
@@ -319,19 +319,24 @@ class ShiftModel:
 if __name__ == "__main__":
     shift = ShiftModel("westaflex", "FLEX", datetime.datetime(2022, 6, 3))
     print(
-        f"2 hours between 2 days test:\nExpected: {7200.0}, actual: {shift.count_time(datetime.datetime(2022, 6, 7, 14, 0, 0), datetime.datetime(2022, 6, 8, 7, 0, 0))}"
+        f"2 hours between 2 days test:\nExpected: {7200.0}, " +
+        f"actual: {shift.count_time(datetime.datetime(2022, 6, 7, 14, 0, 0), datetime.datetime(2022, 6, 8, 7, 0, 0))}"
     )
     print(
-        f"Hours on weekend test:\nExpected: {0.0}, actual: {shift.count_time(datetime.datetime(2022, 6, 4, 14, 0, 0), datetime.datetime(2022, 6, 5, 7, 0, 0))}"
+        f"Hours on weekend test:\nExpected: {0.0}, "+
+        f"actual: {shift.count_time(datetime.datetime(2022, 6, 4, 14, 0, 0), datetime.datetime(2022, 6, 5, 7, 0, 0))}"
     )
     print(
-        f"Hours over holiday test:\nExpected: {3600.0}, actual: {shift.count_time(datetime.datetime(2022, 6, 3, 14, 0, 0), datetime.datetime(2022, 6, 7, 7, 0, 0))}"
+        f"Hours over holiday test:\nExpected: {3600.0}, "+
+        f"actual: {shift.count_time(datetime.datetime(2022, 6, 3, 14, 0, 0), datetime.datetime(2022, 6, 7, 7, 0, 0))}"
     )
     print(
-        f"Skip holidays test:\nExpected: {7200.0}, actual: {shift.count_time(datetime.datetime(2022, 6, 15, 14, 0, 0), datetime.datetime(2022, 6, 20, 7, 0, 0))}"
+        f"Skip holidays test:\nExpected: {7200.0}, "+
+        f"actual:{shift.count_time(datetime.datetime(2022, 6, 15, 14, 0, 0), datetime.datetime(2022, 6, 20, 7, 0, 0))}"
     )
     print(
-        f"Get earliest time test:\nExpected: 2022-06-07 06:00:00, actual: {shift.get_earliest_time(datetime.datetime(2022, 6, 7))}"
+        f"Get earliest time test:\nExpected: 2022-06-07 06:00:00, "+
+        f"actual: {shift.get_earliest_time(datetime.datetime(2022, 6, 7))}"
     )
     shift = ShiftModel("westaflex", "W01S3", datetime.datetime(2022, 3, 9))
     time_in_shift = shift.count_time(

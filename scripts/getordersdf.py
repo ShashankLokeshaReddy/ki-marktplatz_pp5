@@ -65,7 +65,8 @@ def get_date(datetime_object):
 
 
 def combine_datetime_columns(df, col_name):
-    """Combines two columns into one datetime column, where one column contains the date and one column contains the time.
+    """Combines two columns into one datetime column, where one column contains
+    the date and one column contains the time.
     The date column is assumed to be in the col_name column and time is in the directly following column.
     The result will be stored in the col_name column.
 
@@ -126,12 +127,10 @@ def filter_orders(order_df, planning_period_start, planning_period_end):
         _type_: pandas dataframe of filtered orders
     """
     order_df = order_df[
-        (pd.isnull(order_df["final_end"]))
-        | (order_df["final_end"] > planning_period_start)
+        (pd.isnull(order_df["final_end"])) | (order_df["final_end"] > planning_period_start)
     ]
     order_df = order_df[
-        (pd.isnull(order_df["planned_start"]))
-        | (order_df["planned_start"] < planning_period_end)
+        (pd.isnull(order_df["planned_start"])) | (order_df["planned_start"] < planning_period_end)
     ]
     return order_df
 
