@@ -1,13 +1,11 @@
 import pandas as pd
-import pathlib
-import os
-import numpy as np
 import datetime
 from enum import Enum
 from getordersdf import get_westaflex_orders
 from getordersdf import filter_orders
 from getordersdf import set_order_status
 from getordersdf import JobStatus
+from job_summary import summarize_jobs
 from visualization import gantt
 from shift import ShiftModel
 
@@ -245,6 +243,8 @@ order_df = get_westaflex_orders()
 order_df.drop(index=order_df.index[:180], axis=0, inplace=True)
 order_df = filter_orders(order_df, planning_period_start, planning_period_end)
 order_df = set_order_status(order_df)
+# summarize jobs
+order_df = summarize_jobs(order_df)
 priority_list = compute_priority_list(order_df, priority_procedure)
 order_df = schedule_orders(
     shift_model,
