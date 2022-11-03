@@ -3,7 +3,7 @@ import visualization
 import pyomomachsched
 from shift import ShiftModel
 import utility
-import getordersdf
+import orders
 
 # Third party libraries
 import datetime
@@ -81,7 +81,7 @@ def combine_orders(order_df, start):
 
 if __name__ == "__main__":
     # Debugging
-    df = getordersdf.get_westaflex_orders()
+    df = orders.get_westaflex_orders()
     df.drop(index=df.index[:180], axis=0, inplace=True)
     print(
         df[
