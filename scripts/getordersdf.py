@@ -80,7 +80,7 @@ def combine_datetime_columns(df, col_name):
     df[col_name] = df[col_name].apply(get_date) + df.iloc[
         :, df.columns.get_loc(col_name) + 1
     ].astype(str)
-    df[col_name] = pd.to_datetime(df[col_name], errors="ignore")
+    df[col_name] = pd.to_datetime(df[col_name], errors="coerce")
     return df
 
 
@@ -133,6 +133,11 @@ def filter_orders(order_df, planning_period_start, planning_period_end):
         (pd.isnull(order_df["planned_start"])) | (order_df["planned_start"] < planning_period_end)
     ]
     return order_df
+
+def cleanup_machine_list(machine_list):
+    if len(machine_list) > 0 and machine_list[-1] == ',':
+        machine_list = machine_list[:-1]
+    return machine_list
 
 
 def get_westaflex_orders(path: str = DEFAULT_WESTAFLEX_TABLE_PATH) -> pd.DataFrame:
@@ -195,7 +200,7 @@ def get_westaflex_orders(path: str = DEFAULT_WESTAFLEX_TABLE_PATH) -> pd.DataFra
     order_df["machines"] += np.where(order_df["1541"] == "x", "1541,", "")
     order_df["machines"] += np.where(order_df["1542"] == "x", "1542,", "")
     order_df["machines"] += np.where(order_df["1543"] == "x", "1543", "")
-
+    order_df["machines"] = order_df["machines"].apply(cleanup_machine_list)
     # Name first column to reference it for deletion
     order_df = order_df.rename(columns={order_df.columns[0]: "Nichts"})
     order_df = order_df.drop("Nichts", axis=1)
@@ -210,6 +215,7 @@ def get_westaflex_orders(path: str = DEFAULT_WESTAFLEX_TABLE_PATH) -> pd.DataFra
             "Fertigungsauf-tragsnummer",
             "Artikelnummer",
             "Auftragseingabe-zeitpunkt",
+            "Rohrtyp",
             "Nummer Wickel-rohrmaschine",
             "machines",
             "calculated_setup_time",
@@ -235,6 +241,7 @@ def get_westaflex_orders(path: str = DEFAULT_WESTAFLEX_TABLE_PATH) -> pd.DataFra
             "Fertigungsauf-tragsnummer": "job",
             "Artikelnummer": "item",
             "Auftragseingabe-zeitpunkt": "order_release",
+            "Rohrtyp": "tube_type",
             "Nummer Wickel-rohrmaschine": "selected_machine",
             "Maschinenangebot": "machines",
             "Werkzeug-nummer": "tool",

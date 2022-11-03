@@ -4,25 +4,12 @@ import os
 import numpy as np
 import datetime
 from enum import Enum
+from getordersdf import get_westaflex_orders
+from getordersdf import filter_orders
+from getordersdf import set_order_status
+from getordersdf import JobStatus
 from visualization import gantt
 from shift import ShiftModel
-
-# project root path
-PROJECT_PATH = pathlib.Path(__file__).parent.parent.resolve()
-# path to data source file
-DATA_SOURCE_PATH = os.path.join(
-    PROJECT_PATH, "data", "20220706_Auftragsdatenbank_last_10_modified.xlsm"
-)
-# sheet of source file containing database
-DATA_SOURCE_SHEET = "Datenbank_Auftragsdaten"
-
-
-class JobStatus(Enum):
-    UNKNOWN = 1
-    UNPLANNED = 2
-    CALCULATED = 3
-    PLANNED = 4
-    IN_PROGRESS = 5
 
 
 class PriorityProcedure(Enum):
@@ -61,189 +48,6 @@ def combine_datetime_columns(df, col_name):
     ].astype(str)
     df[col_name] = pd.to_datetime(df[col_name], errors="coerce")
     return df
-
-
-def get_orders() -> pd.DataFrame:
-    """Extract all necessary information from the original data source excel sheet.
-
-    Returns:
-        pd.DataFrame: pandas dataframe containing all orders and necessary information
-    """
-    # Read file
-    order_df = pd.read_excel(DATA_SOURCE_PATH, DATA_SOURCE_SHEET)
-    # Rename columns after sheet header
-    order_df = order_df.rename(columns=order_df.iloc[10])
-    # Ignore first 14 rows since data starts at row 15
-    order_df = order_df.drop(np.arange(13))
-    order_df = order_df.reset_index(drop=True)
-    # Combine separate date time columns to datetime
-    order_df = combine_datetime_columns(order_df, "Spätester Bearbeitungsbeginn")
-    order_df = combine_datetime_columns(order_df, "spätester Fertigstellungszeitpunkt")
-    order_df = combine_datetime_columns(order_df, "Berechneter Bearbei-tungsbeginn")
-    order_df = combine_datetime_columns(
-        order_df, "Berechneter Fertigstellungs-zeitpunkt"
-    )
-    order_df = combine_datetime_columns(order_df, "PLAN-Bearbeitungs-beginn")
-    order_df = combine_datetime_columns(order_df, "PLAN-Fertigstellungs-zeitpunkt")
-    order_df = combine_datetime_columns(order_df, "IST- Bearbeitungs-beginn")
-    order_df = combine_datetime_columns(order_df, "IST-Fertigstellungs-zeitpunkt")
-    # Name machine number colums appropriately
-    order_df.columns.values[25] = "1531"
-    order_df.columns.values[26] = "1532"
-    order_df.columns.values[27] = "1533"
-    order_df.columns.values[28] = "1534"
-    order_df.columns.values[29] = "1535"
-    order_df.columns.values[30] = "1536"
-    order_df.columns.values[31] = "1537"
-    order_df.columns.values[32] = "1541"
-    order_df.columns.values[33] = "1542"
-    order_df.columns.values[34] = "1543"
-    # Name first column to reference it for deletion
-    order_df = order_df.rename(columns={order_df.columns[0]: "Nichts"})
-    order_df = order_df.drop("Nichts", axis=1)
-    # get all important columns and rename them
-    order_df = order_df[
-        [
-            "Fertigungsauf-tragsnummer",
-            "Auftragseingabe-zeitpunkt",
-            "Spätester Bearbeitungsbeginn",
-            "Bearbeitungsdauer",
-            "Dauer Handarbeit",
-            "spätester Fertigstellungszeitpunkt",
-            "Berechneter Bearbei-tungsbeginn",
-            "Berechneter Fertigstellungs-zeitpunkt",
-            "PLAN-Bearbeitungs-beginn",
-            "PLAN-Fertigstellungs-zeitpunkt",
-            "IST- Bearbeitungs-beginn",
-            "IST-Fertigstellungs-zeitpunkt",
-            "1531",
-            "1532",
-            "1533",
-            "1534",
-            "1535",
-            "1536",
-            "1537",
-            "1541",
-            "1542",
-            "1543",
-            "Rohrtyp",
-            "Werkzeug-nummer",
-            "Rüstzeit für WKZ/Materialwechsel",
-            "Rüstzeit für Coilwechsel",
-        ]
-    ]
-    order_df.rename(
-        columns={
-            "Fertigungsauf-tragsnummer": "job",
-            "Auftragseingabe-zeitpunkt": "order_release",
-            "Spätester Bearbeitungsbeginn": "latest_start",
-            "spätester Fertigstellungszeitpunkt": "deadline",
-            "Berechneter Bearbei-tungsbeginn": "calculated_start",
-            "Berechneter Fertigstellungs-zeitpunkt": "calculated_end",
-            "PLAN-Bearbeitungs-beginn": "planned_start",
-            "PLAN-Fertigstellungs-zeitpunkt": "planned_end",
-            "IST- Bearbeitungs-beginn": "final_start",
-            "IST-Fertigstellungs-zeitpunkt": "final_end",
-            "Bearbeitungsdauer": "duration_machine",
-            "Dauer Handarbeit": "duration_manual",
-            "Rohrtyp": "tube_type",
-            "Werkzeug-nummer": "tool",
-            "Rüstzeit für WKZ/Materialwechsel": "setuptime_material",
-            "Rüstzeit für Coilwechsel": "setuptime_coil",
-        },
-        inplace=True,
-    )
-    return order_df
-
-
-def filter_orders(order_df, planning_period_start, planning_period_end):
-    """Removes orders, which are marked for removal and are scheduled outside of the planning period.
-    Orders are outside of the planning period if they are already finished (final_end before planning_period_start)
-    or if they are planned after the planning period (planning_start after planning_period_end)
-
-    Args:
-        order_def (_type_): pandas dataframe containing the orders
-        planning_period_start (_type_): start of planning period in datetime
-        planning_period_end (_type_): end of planning period in datetime
-
-    Returns:
-        _type_: pandas dataframe of filtered orders
-    """
-    order_df = order_df[
-        (pd.isnull(order_df["final_end"]))
-        | (order_df["final_end"] > planning_period_start)
-    ]
-    order_df = order_df[
-        (pd.isnull(order_df["planned_start"]))
-        | (order_df["planned_start"] < planning_period_end)
-    ]
-    return order_df
-
-
-def set_order_status(order_df):
-    """Assign a job status to each order according to their time stamps.
-
-    Args:
-        order_df (_type_): pandas dataframe containing the orders
-
-    Returns:
-        _type_: pandas dataframe with an additional status column
-    """
-    order_df["status"] = JobStatus.UNKNOWN
-    for idx in order_df.index:
-        if pd.notnull(order_df.loc[idx, "latest_start"]) and pd.notnull(
-            order_df.loc[idx, "deadline"]
-        ):
-            order_df.loc[idx, "status"] = JobStatus.UNPLANNED
-        if pd.notnull(order_df.loc[idx, "calculated_start"]) and pd.notnull(
-            order_df.loc[idx, "calculated_end"]
-        ):
-            order_df.loc[idx, "status"] = JobStatus.CALCULATED
-        if pd.isnull(order_df.loc[idx, "planned_start"]) and pd.notnull(
-            order_df.loc[idx, "planned_end"]
-        ):
-            order_df.loc[idx, "status"] = JobStatus.PLANNED
-        if pd.notnull(order_df.loc[idx, "final_start"]):
-            order_df.loc[idx, "status"] = JobStatus.IN_PROGRESS
-    # TODO compute final_end for orders in_work, where this is not given (order is finished in future)
-    return order_df
-
-
-def get_order_machine_mapping(order_df):
-    """Parse the machines that are assigned to each order
-
-    Args:
-        order_df (_type_): pandas dataframe containing the orders
-
-    Returns:
-        _type_: mapping from orders to available machines
-    """
-    order_machine_mapping = {}
-    for _, row in order_df.iterrows():
-        auftrag_nr = row["job"]
-        auftrag_machine_list = []
-        if row["1531"] == "x":
-            auftrag_machine_list.append("1531")
-        if row["1532"] == "x":
-            auftrag_machine_list.append("1532")
-        if row["1533"] == "x":
-            auftrag_machine_list.append("1533")
-        if row["1534"] == "x":
-            auftrag_machine_list.append("1534")
-        if row["1535"] == "x":
-            auftrag_machine_list.append("1535")
-        if row["1536"] == "x":
-            auftrag_machine_list.append("1536")
-        if row["1537"] == "x":
-            auftrag_machine_list.append("1537")
-        if row["1541"] == "x":
-            auftrag_machine_list.append("1541")
-        if row["1542"] == "x":
-            auftrag_machine_list.append("1542")
-        if row["1543"] == "x":
-            auftrag_machine_list.append("1543")
-        order_machine_mapping[auftrag_nr] = auftrag_machine_list
-    return order_machine_mapping
 
 
 def compute_priority_list(order_df, priority_procedure: PriorityProcedure):
@@ -323,17 +127,18 @@ def compute_job_period(shift_model, order_df, start_time, job, prev_job=""):
         work_time = setuptime_coil + setuptime_material + duration_machine
     else:
         work_time = setuptime_coil + setuptime_material + duration_manual
+        
+    work_time_minutes = work_time.item() / 60000000000
 
     (job_period_start, job_period_end) = shift_model.compute_work_period(
-        start_time, work_time
+        start_time, work_time_minutes
     )
-    return (job_period_start, job_period_end)
+    return (setuptime_material, job_period_start, job_period_end)
 
 
 def schedule_orders(
     shift_model,
     order_df,
-    order_machine_mapping,
     priority_list,
     planning_period_start,
     planning_period_end,
@@ -372,12 +177,12 @@ def schedule_orders(
 
     # add planned and running jobs
     for job in order_df.loc[order_df["status"] == JobStatus.IN_PROGRESS].iterrows():
-        assigned_machine = order_machine_mapping[job][0]
+        assigned_machine = job['machine'].split(',')[0]
         if job["final_end"] > machine_endtime[assigned_machine]:
             machine_endtime[assigned_machine] = job["final_end"]
             machine_last_job[assigned_machine] = job
     for job in order_df.loc[order_df["status"] == JobStatus.PLANNED].iterrows():
-        assigned_machine = order_machine_mapping[job][0]
+        assigned_machine = job['machine'].split(',')[0]
         if job["planned_end"] > machine_endtime[assigned_machine]:
             machine_endtime[assigned_machine] = job["planned_end"]
             machine_last_job[assigned_machine] = job
@@ -385,11 +190,13 @@ def schedule_orders(
     # iterate over prioritized jobs
     for job in priority_list:
         machine_tmp_id = ""
+        machine_tmp_setuptime = 0
         machine_tmp_starttime = pd.Timestamp("NaT").to_pydatetime()
         machine_tmp_endtime = pd.Timestamp("NaT").to_pydatetime()
         # iterate over possible machines
-        for machine in order_machine_mapping[job]:
-            (machine_curr_starttime, machine_curr_endtime) = compute_job_period(
+        job_machines = order_df.loc[order_df['job'] == job]['machines'].values[0]
+        for machine in job_machines.split(','):
+            (machine_curr_setuptime, machine_curr_starttime, machine_curr_endtime) = compute_job_period(
                 shift_model,
                 order_df,
                 machine_endtime[machine],
@@ -401,6 +208,7 @@ def schedule_orders(
                 or machine_curr_endtime < machine_tmp_endtime
             ):
                 machine_tmp_id = machine
+                machine_tmp_setuptime = machine_curr_setuptime
                 machine_tmp_starttime = machine_curr_starttime
                 machine_tmp_endtime = machine_curr_endtime
 
@@ -415,6 +223,7 @@ def schedule_orders(
             order_df.loc[
                 (order_df["job"] == job), "planned_start"
             ] = machine_tmp_starttime
+            order_df.loc[(order_df["job"] == job), "calculated_setup_time"] = machine_tmp_setuptime
             order_df.loc[(order_df["job"] == job), "planned_end"] = machine_tmp_endtime
             order_df.loc[(order_df["job"] == job), "selected_machine"] = machine_tmp_id
             machine_endtime[machine_tmp_id] = machine_tmp_endtime
@@ -431,16 +240,15 @@ shift_model_type = "W01S3"
 company_name = "westaflex"
 
 shift_model = ShiftModel(company_name, shift_model_type, planning_period_start)
-order_df = get_orders()
+order_df = get_westaflex_orders()
+# TODO remove shortening of database for practical tests
 order_df.drop(index=order_df.index[:180], axis=0, inplace=True)
 order_df = filter_orders(order_df, planning_period_start, planning_period_end)
 order_df = set_order_status(order_df)
-order_machine_mapping = get_order_machine_mapping(order_df)
 priority_list = compute_priority_list(order_df, priority_procedure)
 order_df = schedule_orders(
     shift_model,
     order_df,
-    order_machine_mapping,
     priority_list,
     planning_period_start,
     planning_period_end,
@@ -452,7 +260,6 @@ order_df = order_df[
 ]
 
 # visualize orders as gantt chart
-order_df.rename(columns={"setuptime_material": "setup_time"}, inplace=True)
 gantt(order_df)
 
 # show machine-specific schedule

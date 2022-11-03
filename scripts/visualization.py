@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from adjustText import adjust_text
 import pandas as pd
-
+import numpy as np
 import datetime
 from shift import ShiftModel
 
@@ -136,7 +136,7 @@ def gantt(order_df):
             )
         # Setup time in yellow
         calculated_setup_time = row["calculated_setup_time"]
-        if not isinstance(calculated_setup_time, datetime.timedelta):
+        if not isinstance(calculated_setup_time, datetime.timedelta) and not isinstance(calculated_setup_time, np.timedelta64):
             calculated_setup_time = datetime.timedelta(minutes=calculated_setup_time)
         y = x + calculated_setup_time
         axs.fill_between(
