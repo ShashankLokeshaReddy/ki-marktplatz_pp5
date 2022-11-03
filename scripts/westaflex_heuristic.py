@@ -1,10 +1,10 @@
 import pandas as pd
 import datetime
 from enum import Enum
-from getordersdf import get_westaflex_orders
-from getordersdf import filter_orders
-from getordersdf import set_order_status
-from getordersdf import JobStatus
+from orders import get_westaflex_orders
+from orders import filter_orders
+from orders import set_order_status
+from orders import JobStatus
 from job_summary import summarize_jobs
 from visualization import gantt
 from shift import ShiftModel
