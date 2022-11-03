@@ -16,7 +16,6 @@ def summarize_jobs(order_df: pd.DataFrame) -> pd.DataFrame:
     # create collection lists
     for key, value in aggregation_map.items():
         tool_df = order_df.loc[order_df['job'].isin(value)]
-        print(tool_df)
         aggregation_map[key] = tool_df
         
     return order_df
