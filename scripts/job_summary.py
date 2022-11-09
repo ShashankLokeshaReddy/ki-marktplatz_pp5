@@ -16,10 +16,13 @@ def create_aggregation_map(order_df: pd.DataFrame, column):
     aggregation_map = {}
     unique_objects = order_df[column].unique()
     for object in unique_objects:
-        aggregation_map[object] = []
-        for _, job in order_df.iterrows():
-            if job[column] == object:
-                aggregation_map[object].append(job["job"])
+        if pd.isna(object) or len(object) == 0:
+            print("An object is missing in the database.")
+        else:
+            aggregation_map[object] = []
+            for _, job in order_df.iterrows():
+                if job[column] == object:
+                    aggregation_map[object].append(job["job"])
 
     # create collection lists
     for key, value in aggregation_map.items():
@@ -42,18 +45,30 @@ def summarize_jobs(order_df: pd.DataFrame) -> pd.DataFrame:
     # assuming all jobs in order_df are open (not finished, not in progress, not planned)
     tool_aggregation_map = create_aggregation_map(order_df, "tool")
     item_aggregation_map = create_aggregation_map(order_df, "item")
+    tubetype_aggregation_map = create_aggregation_map(order_df, "tube_type")
 
-    # Printing all tools and items with the amount from the order_df to the console
+    # Printing all tools, items and tubetype with the amount from the order_df to the console
+    sum = 0
     print("::Tools::")
     for tool in tool_aggregation_map.keys():
-        if pd.isna(tool) or len(tool) == 0:
-            print("A tool is missing in the database.")
-        else:
-            print(tool + ": " + str(len(tool_aggregation_map[tool].index)))
+        print(tool + ": " + str(len(tool_aggregation_map[tool].index)))
+        sum += len(tool_aggregation_map[tool].index)
+    print("-> Average = " + str(sum/len(tool_aggregation_map.keys())))
+    
+    sum = 0
     print("\n::Items::")
     for item in item_aggregation_map.keys():
         print(item + ": " + str(len(item_aggregation_map[item].index)))
-
+        sum += len(item_aggregation_map[item].index)
+    print("-> Average = " + str(sum/len(item_aggregation_map.keys())))
+        
+    sum = 0
+    print("\n::Tube Type::")
+    for type in tubetype_aggregation_map.keys():
+        print(type + ": " + str(len(tubetype_aggregation_map[type].index)))
+        sum += len(tubetype_aggregation_map[type].index)
+    print("-> Average = " + str(sum/len(tubetype_aggregation_map.keys())))
+    
     # TODO implement summary function
 
     return order_df
