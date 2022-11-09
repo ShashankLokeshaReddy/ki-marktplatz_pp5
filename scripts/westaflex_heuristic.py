@@ -240,7 +240,7 @@ company_name = "westaflex"
 shift_model = ShiftModel(company_name, shift_model_type, planning_period_start)
 order_df = get_westaflex_orders()
 # TODO remove shortening of database for practical tests
-order_df.drop(index=order_df.index[:180], axis=0, inplace=True)
+order_df.drop(index=order_df.index[:170], axis=0, inplace=True)
 order_df = filter_orders(order_df, planning_period_start, planning_period_end)
 order_df = set_order_status(order_df)
 # summarize jobs
