@@ -1,6 +1,6 @@
 <template>
     <div>
-        <FullCalendar :options="calendarOptions">
+        <FullCalendar ref="machinecalendar" :options="calendarOptions">
          </FullCalendar>
     </div>
 </template>
@@ -18,7 +18,7 @@ import TimegridPlugin from '@fullcalendar/timegrid'
 import InteractionPlugin from '@fullcalendar/interaction'
 import ListPlugin from '@fullcalendar/list'
 import ResourceTimelinePlugin from '@fullcalendar/resource-timeline'
-
+import axios from 'axios'
 
 export default defineComponent({
      
@@ -26,6 +26,7 @@ export default defineComponent({
     components: {FullCalendar},
     data()  {
         return {
+            calendarApi: null,
             calendarOptions: {
                 plugins: [ 
                     DayGridPlugin,
@@ -40,9 +41,9 @@ export default defineComponent({
             initialView: 'resourceTimelineDay',
             schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
             headerToolbar: {
-                left: 'prev, next today myCustomButton',
+                left: 'prev next today myCustomButton',
                 center: 'title',
-                right: 'resourceTimelineMonth, resourceTimelineWeek, resourceTimelineDay',
+                right: 'resourceTimelineMonth resourceTimelineWeek resourceTimelineDay',
                     },
             customButtons: {
                 myCustomButton: {
@@ -69,70 +70,137 @@ export default defineComponent({
             },
             weekends: false,
             editable: true,
-            resourceAreaHeaderContent: 'Machines',
             
-            resources: [
+            resourceAreaColumns: [
                 {
-                    id: "SL 2",
-                    title: "Maschine 1"
-                },
-                {
-                    id: "SL 4",
-                    title: "Maschine 2"
-                },
-                {
-                    id: "SL 5",
-                    title: "Maschine 3"
-                },
-                {
-                    id: "SL 6",
-                    title: "Maschine 4"
-                },
-                {
-                    id: "SL 7",
-                    title: "Maschine 5"
-                },
-                {
-                    id: "SL 8",
-                    title: "Maschine 6"
-                },
-                {
-                    id: "SL 9",
-                    title: "Maschine 7"
-                },
-                {
-                    id: "SL 10",
-                    title: "Maschine 8"
-                },
-                {
-                    id: "SL 11",
-                    title: "Maschine 9"
+                field: 'title',
+                headerContent: 'Machines'
                 }
             ],
-            events: [] as { resourceId : string; title: string; start: Date; end: Date; }[]
-            
-            
+
+            resources: [],
+            events: [] as { resourceId : string; title: string; start: Date; end: Date; eventTextColor : string;}[],
+            eventDidMount: (info) => {
+                info.el.style.background = `orange`;
+                info.el.style.color = "white";
+            },
+            eventResize: (info) => {
+                axios.put('http://localhost:8000/api/jobs/' + info.event.title + '/', {
+                    productionStart: info.event.start,
+                    productionEnd: info.event.end                  
+                })
+                .then(response => {
+                    // Handle successful response
+                    console.log(response.data)
+                })
+                .catch(error => {
+                    // Handle error
+                    console.log(error)
+                })
+            },
+            eventDrop: (info) => {
+                axios.put('http://localhost:8000/api/jobs/' + info.event.title + '/', {
+                    productionStart: info.event.start,
+                    productionEnd: info.event.end                  
+                })
+                .then(response => {
+                    // Handle successful response
+                    console.log(response.data)
+                })
+                .catch(error => {
+                    // Handle error
+                    console.log(error)
+                })
+            },          
+            mounted() {
+                this.$nextTick(() => {
+                    let calendar = this.$refs.machinecalendar.getApi();
+                    let currentView = calendar.view;
+                    console.log(currentView.type);
+                })
+            }
             },
         }
     },
 
    async created(){
-            var response = await fetch('http://localhost:8000/api/machines/')
-            var output : { resourceId: string; title: string; start: Date, end: Date }[] = [];
-            
+            var response = await fetch('http://localhost:8000/api/jobs/')
+            var output : { resourceId: string; jobID: string; partID: string; start: Date, end: Date, productionStart: Date, productionEnd: Date }[] = [];
             output = await response.json()
-     
+            
+            var events_var = []
+            for (var i = 0; i < output.length; ++i) {
+                if(output[i]["productionEnd"]===null){
+                    output[i]["productionEnd"] = output[i]["end"]
+                }
+                var temp_event = {
+                    "resourceId":output[i]["resourceId"],
+                    "title":output[i]["jobID"],
+                    "start":output[i]["productionStart"],
+                    "end":output[i]["productionEnd"],
+                    "eventColor":"orange",
+                    "display":'auto',
+                    "className": "fwd"
+                };
+
+                if (temp_event["resourceId"] === "SL 2")
+                {
+                    temp_event["resourceId"] = "Maschine 1"
+                }
+                if (temp_event["resourceId"] === "SL 4")
+                {
+                    temp_event["resourceId"] = "Maschine 2"
+                }
+                if (temp_event["resourceId"] === "SL 5")
+                {
+                    temp_event["resourceId"] = "Maschine 3"
+                }
+                if (temp_event["resourceId"] === "SL 6")
+                {
+                    temp_event["resourceId"] = "Maschine 4"
+                }
+                if (temp_event["resourceId"] === "SL 7")
+                {
+                    temp_event["resourceId"] = "Maschine 5"
+                }
+                if (temp_event["resourceId"] === "SL 8")
+                {
+                    temp_event["resourceId"] = "Maschine 6"
+                }
+                if (temp_event["resourceId"] === "SL 9")
+                {
+                    temp_event["resourceId"] = "Maschine 7"
+                }
+                if (temp_event["resourceId"] === "SL 10")
+                {
+                    temp_event["resourceId"] = "Maschine 8"
+                }
+                if (temp_event["resourceId"] === "SL 11")
+                {
+                    temp_event["resourceId"] = "Maschine 9"
+                }
+                events_var.push(temp_event);
+            }
+
+            var resources_var: { id: string; title: string }[] = [];
+            for (var i = 0; i < output.length; ++i) {
+                var temp_res = {
+                    "id":output[i]["resourceId"],
+                    "title":output[i]["resourceId"]
+                };
+                resources_var.push(temp_res);
+            }
             /*output = [{
                "resourceId": "SL 2",
                 "title": "12403",
                 "start": new Date("2016-02-26T11:54:52Z"),
                 "end": new Date("2022-09-13T14:10:06Z")
                     }]*/
-            var machinecount = output.length
+            var machinecount = resources_var.length
             console.log(machinecount)
             
-            
-            this.calendarOptions["events"] = output
+            this.calendarOptions["events"] = events_var
+            this.calendarOptions["resources"] = resources_var
             console.log(this.calendarOptions["events"])
         }
 
@@ -141,6 +209,12 @@ export default defineComponent({
 </script>
 
 <style>
-
-
+.bck{
+    height:10px;
+    vertical-align: center;
+}
+.fwd{
+    height:20px;
+    vertical-align: center;
+}
 </style>
