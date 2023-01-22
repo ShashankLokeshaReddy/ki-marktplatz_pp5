@@ -234,9 +234,11 @@ export default defineComponent({
     },
 
    async created(){
-            var response = await fetch('http://localhost:8000/api/jobs/')
+            var response = await fetch('http://localhost:8000/api/jobs/getSchedule')
+            var output_resp = await response.json()
+            var status = output_resp["Status"]
             var output : { resourceId: string; jobID: string; partID: string; start: Date, end: Date, productionStart: Date, productionEnd: Date }[] = [];
-            output = await response.json()
+            output = output_resp["Table"]
             
             var events_var = []
             for (var i = 0; i < output.length; ++i) {
