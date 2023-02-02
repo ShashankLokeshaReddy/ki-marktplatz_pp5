@@ -1,0 +1,29 @@
+# python
+*.egg-info
+
+# pycharm
+.idea
+
+# VS Code
+.vscode
+
+# spyder
+__pycache__
+
+# Mac file system
+.DS_STORE
+
+# conda
+/arise.egg-info/
+
+# jupyter notebook
+*.ipynb_checkpoints
+
+# data
+/data/
+
+# Excel intermediate
+~$*.xls*
+
+# Django DB
+/django_prototype/data/

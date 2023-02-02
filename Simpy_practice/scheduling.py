@@ -1,5 +1,6 @@
 import simpy
 import pendulum
+import random
 from datetime import datetime
 
 def schedule_jobs(env, job_list, m_id):
@@ -35,6 +36,7 @@ def schedule_jobs(env, job_list, m_id):
 
       if start_time_comp > release_date_comp:
         job["jobStartDelay"] = str(start_time_comp - release_date_comp)
+        job_start_delays.append(str(start_time_comp - release_date_comp))
       
       if end_time_comp > deadline_comp:
         job["jobEndDelay"] = str(end_time_comp - deadline_comp)
@@ -2126,6 +2128,7 @@ job_list = [
 # initialize the simulation environment
 env = simpy.Environment()
 deadlin_exceeded = []
+job_start_delays = []
 machines = []
 for job in job_list:
   machine_id = job["resourceId"]
@@ -2133,7 +2136,8 @@ for job in job_list:
     machines.append(machine_id)
 
 for m_id in machines:
-  sorting_tech = "deadline"
+  sorting_tech = "random"
+  # baselinr approaches, presorts the joblist
   if sorting_tech == "SJF":
     job_list = sorted(job_list, key=lambda x: x['productionDuration'])
   elif sorting_tech == "LJF":
@@ -2142,10 +2146,14 @@ for m_id in machines:
     job_list = sorted(job_list, key=lambda x: datetime.strptime(x['deadlineDate'], '%Y-%m-%d %H:%M:%S'))
   elif sorting_tech == "releasedate":
     job_list = sorted(job_list, key=lambda x: datetime.strptime(x['jobInputDate'], '%Y-%m-%d %H:%M:%S'))
+  elif sorting_tech == "random":
+    random.shuffle(job_list)
+    job_list = job_list
 
   env.process(schedule_jobs(env, job_list, m_id))
 
 env.run()
 print("Deadline exceeded for these many jobs: ", len(deadlin_exceeded))
 print("These are the job IDs of those jobs: ", deadlin_exceeded)
-print("job_list: ", job_list)
+print("Start delay for these many jobs: ", len(job_start_delays))
+print("job_start_delays: ", job_start_delays)
