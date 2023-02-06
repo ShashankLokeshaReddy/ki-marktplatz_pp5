@@ -69,7 +69,10 @@ export default defineComponent({
                 }
             },
             weekends: true,
-            editable: true,
+            // editable: true, # to ensure that it cannot be dragged to a different resource
+            eventStartEditable: true,
+            eventDurationEditable: true,
+            resourceEditable: false,
             
             resourceAreaColumns: [
                 {

@@ -20,18 +20,8 @@ def check_operator_availability(operatorID, env, operators):
     if operatorID in operators:
         return operators[operatorID].request()
     else:
-        operators[operatorID] = simpy.Resource(env, capacity=5)
+        operators[operatorID] = simpy.Resource(env, capacity=1)
         return operators[operatorID].request()
-
-# Define the simulation
-def simulate(job_list):
-    env = simpy.Environment()
-    machines = {}
-    operators = {}
-    # Process each job
-    for job in job_list:
-        env.process(process_job(job, env, machines, operators))
-    env.run()
 
 def process_job(job, env, machines, operators):
     # Request the machine
@@ -44,7 +34,7 @@ def process_job(job, env, machines, operators):
         job["productionStart"] = datetime.fromtimestamp(env.now).strftime("%Y-%m-%d %H:%M:%S")
         print(f"Job {job['jobID']} for Part {job['partID']} on Machine {job['resourceId']} starts at {job['productionStart']}")
         # Check if the machine is broken
-        if random.random() < 0.5: # 10% chance of machine breaking down
+        if random.random() < 1.0: # 10% chance of machine breaking down
             print(f"Machine {job['resourceId']} broke down at {env.now}")
             repair_time = 120 * 60 # simulate repair time
             with check_operator_availability(job['operatorID'], env, operators) as operator:
@@ -2171,8 +2161,8 @@ machines = {
 
 # Create a dictionary of operators
 operators = {
-    "O1": simpy.Resource(env, capacity=5),
-    "O2": simpy.Resource(env, capacity=5)
+    "O1": simpy.Resource(env, capacity=1),
+    "O2": simpy.Resource(env, capacity=1)
 }
 
 job_start_delays = []
