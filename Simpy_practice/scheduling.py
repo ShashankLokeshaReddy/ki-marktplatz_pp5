@@ -2136,7 +2136,7 @@ for job in job_list:
     machines.append(machine_id)
 
 for m_id in machines:
-  sorting_tech = "releasedate"
+  sorting_tech = ""
   # baselinr approaches, presorts the joblist
   if sorting_tech == "SJF":
     job_list = sorted(job_list, key=lambda x: x['productionDuration'])

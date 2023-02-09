@@ -11,7 +11,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Job',
             fields=[
-                ('jobID', models.CharField(max_length=140, primary_key=True)),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('jobID', models.CharField(max_length=140, null=True)),
                 ('resourceId', models.CharField(max_length=140, null=True)),
                 ('partID', models.CharField(max_length=140, null=True)),
                 ('jobInputDate', models.DateTimeField(null=True)),

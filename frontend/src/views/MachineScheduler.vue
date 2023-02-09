@@ -85,7 +85,8 @@ export default defineComponent({
                 info.el.style.color = "white";
             },
             eventResize: (info) => {
-                const jobs_data = [{"jobID": info.event.title, "productionStart": info.event.start, "productionEnd": info.event.end}];
+                var resources = info.event.getResources();
+                const jobs_data = [{"jobID": info.event.title, "productionStart": info.event.start, "productionEnd": info.event.end, "resourceId": resources[0]["title"]}];
 
                 axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
                 .then(response => {
@@ -98,7 +99,8 @@ export default defineComponent({
                 });
             },
             eventDrop: (info) => {
-                const jobs_data = [{"jobID": info.event.title, "productionStart": info.event.start, "productionEnd": info.event.end}];
+                var resources = info.event.getResources();
+                const jobs_data = [{"jobID": info.event.title, "productionStart": info.event.start, "productionEnd": info.event.end, "resourceId": resources[0]["title"]}];
 
                 axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
                 .then(response => {
