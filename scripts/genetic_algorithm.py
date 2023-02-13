@@ -38,13 +38,13 @@ class MyProblem(ElementwiseProblem):
                          )
 
     def _evaluate(self, x, out, *args, **kwargs):
-        f1 = -abs(makespan(x))
-        f2 = average_lateness(x)
+        f1 = -abs(makespan(ids=x, decider="genetic"))
+        f2 = average_lateness(ids=x, decider="genetic")
 
 
         out["F"] = [f1, f2]
 
-def main_algorithm():
+def main_algorithm(gen_amount = 5):
     
     print("Start")
     problem = MyProblem()
@@ -59,7 +59,7 @@ def main_algorithm():
                     )
 
 
-    termination = get_termination("n_gen", 5)
+    termination = get_termination("n_gen", gen_amount)
 
     
 
@@ -74,7 +74,7 @@ def main_algorithm():
     F = res.F
     output = [X,F]
     print("end")
-    return output
+    return output, 
     
 
 

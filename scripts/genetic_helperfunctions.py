@@ -6,16 +6,21 @@ import pandas as pd
 import random
 import copy
 
+
 machineslist = [1531, 1532, 1533,1534, 1535, 1536, 1537,1541, 1542, 1543]
 start = datetime.datetime(2022, 2, 27, 6, 0, 0)
 #end = datetime.datetime(2022, 3, 4, 22, 0, 0)
 end = datetime.datetime(2022, 2, 27, 22, 0, 0)
 
+main_df = orders.get_westaflex_orders()
 #resetting/initialising the dataframe using orders.py
-def initializing_new_df():
+def initializing_new_df(ids = main_df.index):
     
-
-    original_df = orders.get_westaflex_orders()
+    original_df = copy.deepcopy(main_df)
+    original_df = original_df.reset_index(drop=True)
+    original_df.index = ids
+    original_df = original_df.sort_index(ascending=True)
+    #original_df = orders.get_westaflex_orders()
 
     original_df["duration"] = (original_df["setuptime_material"] + original_df["setuptime_coil"] + original_df["duration_machine"] + original_df["duration_manual"]).dt.seconds # am Ende überprüfen ob es klappt
     #df["chosen_machine"] = [0]*len(df)
@@ -26,7 +31,7 @@ def initializing_new_df():
 
     #30 Einträge nur nutzen , für den Test
     original_df = original_df.reset_index(drop=True)
-    original_df = original_df.tail(n=120)
+    #original_df = original_df.tail(n=120)
     #nochmal überlegen ob das heir sinn ergibt
     #original_df.index = ids[:30]
     original_df = original_df.sort_index(ascending=True)
@@ -150,8 +155,12 @@ def earliest_deadline_first(ids):
     return df           #hier muss helperframe für unsere heuristik stehen
 
 
-def average_lateness(ids):#
-    init_df = earliest_deadline_first(ids)
+def average_lateness(decider, ids=[], heuristic = None):
+    if decider == "genetic":
+        init_df = earliest_deadline_first(ids)
+    if decider == "custom":
+        init_df = heuristic(machineslist, start, end)
+    
     lateness_df = copy.deepcopy(init_df)
     #Average lateness
     lateness_seconds = pd.to_timedelta(lateness_df["lateness"]).dt.total_seconds()
@@ -162,9 +171,12 @@ def average_lateness(ids):#
     
     return average_lateness
 
-def makespan(ids):
+def makespan(decider, ids=[], heuristic = None):
+    if decider == "genetic":
+        init_df = earliest_deadline_first(ids)
+    if decider == "custom":
+        init_df = heuristic(machineslist, start)
     
-    init_df =  earliest_deadline_first(ids)
     
     id_start = init_df.index[0]
     
