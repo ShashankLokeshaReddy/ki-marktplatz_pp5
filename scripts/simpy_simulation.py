@@ -64,7 +64,7 @@ class MachineGroup:
         return available_machines 
 
     def run_job(self, job):
-        release_time = string_to_timestamp("2021-09-01 00:00:00")
+        release_time = string_to_timestamp(job["order_release"]) # "2021-09-01 00:00:00"
         current_time = datetime.fromtimestamp(self.env.now)
         diff_delay = max((release_time - current_time).total_seconds(),0)
         yield self.env.timeout(diff_delay)
