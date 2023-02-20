@@ -2,6 +2,7 @@ pandas
 numpy
 simpy
 pendulum
+pymoo
 Django>=3.0,<4.0
 psycopg2>=2.8
 datetime

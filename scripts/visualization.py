@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 from adjustText import adjust_text
-from IPython.display import display
 import pandas as pd
-
+import numpy as np
 import datetime
+from shift import ShiftModel
 
 # Colors
 ai_marketplace_red = "#d50c2f"
@@ -45,9 +45,61 @@ company_holidays = [
 
 def gantt(order_df):
     """Visualize the order table as a Gantt chart as a job and a machine chart."""
+    # TODO: Seperate into smaller functions
     bw = 0.3
     fig, axs = plt.subplots(figsize=(12, 0.7 * order_df.shape[0]))
     idx = 0
+    # Shift downtimes as gray bars
+    shift_name = order_df.iloc[-1]["shift"]
+    # shift_name = 'W01S3'
+    axs.text(
+        0.05,
+        1.01,
+        f"shift: {shift_name}",
+        verticalalignment="bottom",
+        horizontalalignment="left",
+        transform=axs.transAxes,
+        color="black",
+        fontsize=15,
+    )
+    # TODO: temporary solution, company name needs to be in the order_df
+    company = order_df.attrs["company_name"]
+    shift = ShiftModel(company, shift_name)
+    shift_intervals = []
+    if (
+        order_df["calculated_end"].max().date()
+        < order_df["deadline"].max().to_pydatetime().date()
+    ):
+        end = order_df["deadline"].max().to_pydatetime().date()
+    else:
+        end = order_df["calculated_end"].max().date()
+    for day in (
+        pd.date_range(
+            start=order_df["order_release"].min().to_pydatetime().date(), end=end
+        )
+        .strftime("%Y-%m-%d")
+        .tolist()
+    ):
+        day = datetime.datetime.fromisoformat(day)
+        day_shift = shift.shifts.loc[
+                (shift.shifts["shift"] == shift_name)
+                & (shift.shifts["weekday"] == day.weekday()),
+                "interval0":"interval5",
+            ].values[0]
+        for interval in day_shift[day_shift != None]:
+            x = datetime.datetime.combine(day, interval[0])
+            y = datetime.datetime.combine(day, interval[1])
+            shift_intervals.append((x, y))
+        if day in shift.company_holidays:
+            x = day
+            y = day + datetime.timedelta(days=1)
+            axs.axvspan(x, y, color="gray", alpha=0.3)
+    for index, interval in enumerate(shift_intervals):
+        if index < len(shift_intervals) - 1:
+            axs.axvspan(
+                interval[1], shift_intervals[index + 1][0], color="gray", alpha=0.3
+            )
+
     for index, row in order_df.iterrows():
         x = row["order_release"]
         y = row["deadline"]
@@ -83,7 +135,10 @@ def gantt(order_df):
                 linewidth=0,
             )
         # Setup time in yellow
-        y = x + datetime.timedelta(minutes=row["setup_time"])
+        calculated_setup_time = row["calculated_setup_time"]
+        if not isinstance(calculated_setup_time, datetime.timedelta) and not isinstance(calculated_setup_time, np.timedelta64):
+            calculated_setup_time = datetime.timedelta(minutes=calculated_setup_time)
+        y = x + calculated_setup_time
         axs.fill_between(
             [x, y],
             [idx - bw / 2, idx - bw / 2],
@@ -99,7 +154,7 @@ def gantt(order_df):
         axs.text(
             row["calculated_end"],
             idx,
-            str(row["machine"]),
+            str(row["selected_machine"]),
             color="black",
             weight="bold",
             horizontalalignment="left",
@@ -128,29 +183,62 @@ def gantt(order_df):
 
     # Machine plot
     # TODO: List all machines, even when not used at all
-    machines = sorted([str(i) for i in order_df["machine"].unique()])
+    machines = sorted([str(i) for i in order_df["selected_machine"].unique()])
+    # remove duplicates
+    machines = list(dict.fromkeys(machines))
 
-    plt.figure(figsize=(12, 5))
+    fig, axs = plt.subplots(figsize=(12, 5))
+    # Shift downtimes as gray bars
+    # TODO: Put into own function
+    shift = ShiftModel(company, shift_name)
+    shift_intervals = []
+    for day in (
+        pd.date_range(
+            start=order_df["order_release"].min().to_pydatetime().date(), end=end
+        )
+        .strftime("%Y-%m-%d")
+        .tolist()
+    ):
+        day = datetime.datetime.fromisoformat(day)
+        day_shift = shift.shifts.loc[
+                (shift.shifts["shift"] == shift_name)
+                & (shift.shifts["weekday"] == day.weekday()),
+                "interval0":"interval5",
+            ].values[0]
+        for interval in day_shift[day_shift != None]:
+            x = datetime.datetime.combine(day, interval[0])
+            y = datetime.datetime.combine(day, interval[1])
+            shift_intervals.append((x, y))
+        if day in shift.company_holidays:
+            x = day
+            y = day + datetime.timedelta(days=1)
+            axs.axvspan(x, y, color="gray", alpha=0.3)
+    for index, interval in enumerate(shift_intervals):
+        if index < len(shift_intervals) - 1:
+            axs.axvspan(
+                interval[1], shift_intervals[index + 1][0], color="gray", alpha=0.3
+            )
+
     texts = []
     for index, row in order_df.iterrows():
-        idx = machines.index(str(row["machine"]))
+        idx = machines.index(str(row["selected_machine"]))
         x = row["calculated_start"]
         y = row["calculated_end"]
-        plt.fill_between(
+        axs.fill_between(
             [x, y],
             [idx - bw / 2, idx - bw / 2],
             [idx + bw / 2, idx + bw / 2],
             color=ai_marketplace_blue_green,
             alpha=0.8,
         )
-        plt.plot(
+        axs.plot(
             [x, y, y, x, x],
             [idx - bw / 2, idx - bw / 2, idx + bw / 2, idx + bw / 2, idx - bw / 2],
             color="k",
             linewidth=1,
         )
         texts.append(
-            plt.text(
+            axs.text(
                 row["calculated_start"],
                 idx + 0.25,
                 "Job " + str(row["job"]),
@@ -160,12 +248,11 @@ def gantt(order_df):
                 verticalalignment="bottom",
             )
         )
-    plt.xlim(xlim)
-    plt.ylim(-0.5, len(machines) - 0.5)
-    plt.title("Machine Schedule")
-    plt.yticks(range(len(machines)), machines)
-    plt.ylabel("Machines")
-    plt.grid(axis="x")
-    # TODO readd function when problem with large database is solved
-    # adjust_text(texts, only_move={'texts': 'y'})
+    axs.set_xlim(xlim)
+    axs.set_ylim(-0.5, len(machines) - 0.5)
+    axs.set_title("Machine Schedule")
+    axs.set_yticks(range(len(machines)), machines)
+    axs.set_ylabel("Machines")
+    axs.grid(axis="x")
+    adjust_text(texts, only_move={"texts": "y"})
     plt.show()

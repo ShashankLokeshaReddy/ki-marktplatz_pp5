@@ -123,6 +123,16 @@ class ProductionPlant:
 def parse_datetime(datetime_str):
     return datetime.datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
 
+def get_makespan(job_list):
+    min_start = None
+    max_end = None
+    for job in job_list:
+        if not min_start or string_to_timestamp(job["productionStart"]) < min_start:
+            min_start = string_to_timestamp(job["productionStart"])
+        if not max_end or string_to_timestamp(job["productionEnd"]) > max_end:
+            max_end = string_to_timestamp(job["productionEnd"])
+    return max_end - min_start
+
 job_start_delays = []
 deadlin_exceeded = []
 
@@ -2453,7 +2463,7 @@ def main():
         }
     ]
 
-    sorting_tech = "random"
+    sorting_tech = "deadline"
     # baseline approaches, presorts the joblist
     if sorting_tech == "SJF":
         job_list = sorted(job_list, key=lambda x: x['productionDuration'])
@@ -2471,9 +2481,11 @@ def main():
     env.run()
     print(job_list)
     print("Deadline exceeded for these many jobs: ", len(deadlin_exceeded))
-    print("These are the job IDs of those jobs: ", sum(deadlin_exceeded))
+    print("Sum of deadline delays: ", sum(deadlin_exceeded))
     print("Start delay for these many jobs: ", len(job_start_delays))
     print("Sum of job start delays: ", sum(job_start_delays))
+    makespan = get_makespan(job_list)
+    print("Makespan: ", makespan)
 
 if __name__ == "__main__":
     main()
