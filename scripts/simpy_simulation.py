@@ -8,6 +8,20 @@ from genetic_helperfunctions import makespan, average_lateness, machineslist, st
 import json
 import time
 
+grouping = False
+max_machine_duration_flag = [False]
+max_machine_duration_default = 604800.0
+max_machine_duration = [max_machine_duration_default]
+iteration_start_time = [0]
+job_start_delays = []
+deadlin_exceeded = []
+total_job_start_delays = []
+total_deadlin_exceeded = []
+makespans = []
+makespans_cur_iter = []
+scheduled_jobs = []
+scheduled_jobs_in_cur_iter = []
+
 def string_to_timestamp(datestring):
     return datetime.strptime(str(datestring), "%Y-%m-%d %H:%M:%S")
 
@@ -18,7 +32,6 @@ class Operator:
         self.operator = simpy.Resource(env, capacity=1)
     
     def is_available(self, job):
-        # return self.operator.capacity > 0
         if self.operator.count == 0:
             availability = True
         else:
@@ -32,7 +45,6 @@ class Machine:
         self.machine = simpy.Resource(env, capacity=1)
     
     def is_available(self):
-        # return self.machine.capacity > 0
         if self.machine.count == 0:
             availability = True
         else:
@@ -65,7 +77,9 @@ class MachineGroup:
 
     def run_job(self, job):
         release_time = string_to_timestamp(job["order_release"]) # "2021-09-01 00:00:00"
+        earliest_prod_start_time = self.env.now
         current_time = datetime.fromtimestamp(self.env.now)
+        # print(current_time)
         diff_delay = max((release_time - current_time).total_seconds(),0)
         yield self.env.timeout(diff_delay)
         if grouping:
@@ -77,7 +91,7 @@ class MachineGroup:
             duration_machine = job["duration_machine"].total_seconds()
 
         while not available_machines:
-            yield self.env.timeout(1)
+            yield self.env.timeout(60)
             if grouping:
                 available_machines = [machine for machine in self.machines if machine.is_available()]
             else:
@@ -87,10 +101,21 @@ class MachineGroup:
         if not chosen_machine.name in possible_machines:
             print("Wrong machine allocated")
             return
+        # print(current_time)
+        # print("max_machine_duration",(self.env.now + job["duration_machine"].total_seconds())/max_machine_duration_default, (earliest_prod_start_time + max_machine_duration[0])/max_machine_duration_default)
+        if not grouping and ((self.env.now + job["duration_machine"].total_seconds()) > (earliest_prod_start_time + max_machine_duration[0])):
+            if max_machine_duration[0] == max_machine_duration_default and not max_machine_duration_flag[0]:
+                print(self.env.now,"production duration exceeded for the job ", job["job"])
+                return
+            else:
+                new_max_machine_duration = self.env.now + job["duration_machine"].total_seconds() - earliest_prod_start_time #, 1.1*max_machine_duration[0])
+                delete_all_elements(max_machine_duration)
+                max_machine_duration.append(new_max_machine_duration)
+                delete_all_elements(max_machine_duration_flag)
+                max_machine_duration_flag.append(False)
 
         machine_request = chosen_machine.machine.request()
         yield machine_request
-        # print(chosen_machine.name," self.availability = False :",chosen_machine.machine.capacity, chosen_machine.machine.count)
 
         start = self.env.now
         job["calculated_start"] = datetime.fromtimestamp(start).strftime("%Y-%m-%d %H:%M:%S")
@@ -99,14 +124,18 @@ class MachineGroup:
          
         yield self.env.timeout(duration_machine)
         job["calculated_end"] = datetime.fromtimestamp(self.env.now).strftime("%Y-%m-%d %H:%M:%S")
+
         # print(f"Job {job['job']} on Machine {job['selected_machine']} ends at {job['calculated_end']}")
         chosen_machine.machine.release(machine_request)
-        # print(job['selected_machine']," self.availability = False :",chosen_machine.machine.capacity, chosen_machine.machine.count)
 
         start_time_comp = string_to_timestamp(job["calculated_start"])
         end_time_comp = string_to_timestamp(job["calculated_end"])
         deadline_comp = string_to_timestamp(job["deadline"])
-        
+
+        if start_time_comp < release_time:
+            print("Error in start time calculation")
+            return
+
         if start_time_comp > release_time:
             job["jobStartDelay"] = (start_time_comp - release_time).total_seconds()
             job_start_delays.append(job["jobStartDelay"])
@@ -124,6 +153,9 @@ class MachineGroup:
         job["latest_start"] = job["latest_start"].strftime('%Y-%m-%d %H:%M:%S')
         job["setup_time"] = job["setup_time"].total_seconds()
         job["status"] = job["status"].value
+        
+        scheduled_jobs.append(job)
+        scheduled_jobs_in_cur_iter.append(job)
 
     def schedule_job(self, sublist):
         for job in sublist:
@@ -165,97 +197,152 @@ def get_makespan(job_list):
     min_start = None
     max_end = None
     for job in job_list:
-        if not min_start or string_to_timestamp(job["calculated_start"]) < min_start:
-            min_start = string_to_timestamp(job["calculated_start"])
-        if not max_end or string_to_timestamp(job["calculated_end"]) > max_end:
-            max_end = string_to_timestamp(job["calculated_end"])
-    return (max_end - min_start).total_seconds()
-
-grouping = False
-job_start_delays = []
-deadlin_exceeded = []
-total_job_start_delays = []
-total_deadlin_exceeded = []
-makespans = []
+        if not pd.isna(job["calculated_start"]):
+            if not min_start or string_to_timestamp(job["calculated_start"]) < min_start:
+                min_start = string_to_timestamp(job["calculated_start"])
+            if not max_end or string_to_timestamp(job["calculated_end"]) > max_end:
+                max_end = string_to_timestamp(job["calculated_end"])
+    if min_start != None and max_end != None:
+        return (max_end - min_start).total_seconds()
+    else:
+        delete_all_elements(max_machine_duration_flag)
+        max_machine_duration_flag.append(True)
 
 def delete_all_elements(my_list):
     for i in range(len(my_list) - 1, -1, -1):
         del my_list[i]
     return my_list
 
+def get_desired_start(job_list):
+    desired_start_date = None
+    for job in job_list:
+        setup_time = job['setup_time']
+        job_duration = job['duration_machine']
+        latest_start_time = job['deadline'] - job_duration #- setup_time
+        
+        if desired_start_date == None:
+            desired_start_date = latest_start_time
+        if latest_start_time < desired_start_date:
+            desired_start_date = latest_start_time
+        # if string_to_timestamp(job['deadline']).timestamp() < string_to_timestamp(desired_start_date.strftime('%Y-%m-%d %H:%M:%S')).timestamp() + max_machine_duration[0]:
+        #     print("Before",job['job'] , string_to_timestamp(job['deadline']).timestamp() , string_to_timestamp(desired_start_date.strftime('%Y-%m-%d %H:%M:%S')).timestamp() , max_machine_duration[0])
+        #     delete_all_elements(max_machine_duration)
+        #     new_max_machine_duration = string_to_timestamp(job['deadline']).timestamp() - string_to_timestamp(desired_start_date.strftime('%Y-%m-%d %H:%M:%S')).timestamp()
+        #     max_machine_duration.append(new_max_machine_duration)
+        #     delete_all_elements(max_machine_duration_flag)
+        #     max_machine_duration_flag.append(False)
+        #     print("After",job['job'] , string_to_timestamp(job['deadline']).timestamp() , string_to_timestamp(desired_start_date.strftime('%Y-%m-%d %H:%M:%S')).timestamp() , max_machine_duration[0])
+        #     print("Something needs to be done here")
+
+    return desired_start_date.strftime('%Y-%m-%d %H:%M:%S')
+
+def calculated_end_max(scheduled_jobs):
+    max_timestamp = 0
+    if scheduled_jobs != []:
+        for item in scheduled_jobs:
+            if string_to_timestamp(item["calculated_end"]).timestamp() > max_timestamp:
+                max_timestamp = string_to_timestamp(item["calculated_end"]).timestamp()
+
+    return max_timestamp
+
+
 def main(ids):
+    total_job_start_delays = []
+    total_deadlin_exceeded = []
+    makespans = []
+    delete_all_elements(max_machine_duration)
+    max_machine_duration.append(max_machine_duration_default)
     starttime = time.time()
     print("Simpy Simulation Start")
     df = orders.get_westaflex_orders()
-    # df = pd.DataFrame(data, index=ids)
     df = df.reindex(ids)
-    min_val = df['order_release'].min()
     job_list = df.to_dict(orient='records')
-
     ml1 = ManufacturingLayer()
 
     pp = ProductionPlant()
     pp.add_manufacturing_layer(ml1)
-    dt = datetime(1970, 1, 1, 1, 0, 0)
-    unix_time = int((dt - datetime(1970, 1, 1)).total_seconds())
-    
     for i, manufacturing_layer in enumerate(pp.manufacturing_layers):
-        env = simpy.Environment(initial_time=0)
-        # env.advance(unix_time)
-        m0 = Machine(env, "1531")
-        m1 = Machine(env, "1532")
-        m2 = Machine(env, "1533")
-        m3 = Machine(env, "1534")
-        m4 = Machine(env, "1535")
-        m5 = Machine(env, "1536")
-        m6 = Machine(env, "1537")
-        m7 = Machine(env, "1541")
-        m8 = Machine(env, "1542")
-        m9 = Machine(env, "1543")
+        while len(scheduled_jobs) < len(job_list):
+            jobs_not_scheduled = [job for job in job_list if job not in scheduled_jobs]
+            desired_start_date = get_desired_start(jobs_not_scheduled)
+            if scheduled_jobs == []: # give 11.6 days buffer for 1st batch jobs
+                desired_start_date = string_to_timestamp(desired_start_date).timestamp() - df['duration_machine'].max().total_seconds()
+            if scheduled_jobs != []: # no buffer for the next batch jobs
+                end_max = calculated_end_max(scheduled_jobs)
+                print(desired_start_date, end_max)
+                desired_start_date = max(string_to_timestamp(desired_start_date).timestamp(), end_max)
+                print(f"calculated_end_max time for the scheduled batch of jobs: {datetime.fromtimestamp(end_max)}")
+            print(f"Desired start time for the batch of jobs: {datetime.fromtimestamp(desired_start_date)}")
 
-        mg1 = MachineGroup(env, "group1")
-        mg1.add_machine(m0)
-        mg1.add_machine(m1)
-        mg1.add_machine(m2)
-        mg1.add_machine(m3)
-        mg1.add_machine(m4)
-        mg1.add_machine(m5)
-        mg1.add_machine(m6)
-        mg1.add_machine(m7)
-        mg1.add_machine(m8)
-        mg1.add_machine(m9)
+            env = simpy.Environment(initial_time = desired_start_date)
+            m0 = Machine(env, "1531")
+            m1 = Machine(env, "1532")
+            m2 = Machine(env, "1533")
+            m3 = Machine(env, "1534")
+            m4 = Machine(env, "1535")
+            m5 = Machine(env, "1536")
+            m6 = Machine(env, "1537")
+            m7 = Machine(env, "1541")
+            m8 = Machine(env, "1542")
+            m9 = Machine(env, "1543")
 
-        ml1.add_machine_group(mg1)
+            mg1 = MachineGroup(env, "group1")
+            mg1.add_machine(m0)
+            mg1.add_machine(m1)
+            mg1.add_machine(m2)
+            mg1.add_machine(m3)
+            mg1.add_machine(m4)
+            mg1.add_machine(m5)
+            mg1.add_machine(m6)
+            mg1.add_machine(m7)
+            mg1.add_machine(m8)
+            mg1.add_machine(m9)
 
-        manufacturing_layer.schedule_job(job_list)
-        env.run()
+            ml1.add_machine_group(mg1)
+
+            manufacturing_layer.schedule_job(jobs_not_scheduled)
+            env.run()
+
+            makespan = get_makespan(scheduled_jobs_in_cur_iter)
+            print("Makespan: ", makespan)
+            if makespan != None:
+                makespans_cur_iter.append(makespan)
+
+            # Do this for the next manufacturing layer
+            if grouping:
+                for job in job_list:
+                    job["selected_machine"] = ""
+                    job["order_release"] = job["calculated_end"]
+                    job["calculated_start"] = ""
+                    job["calculated_end"] = ""
+                    job["jobStartDelay"] = ""
+                    job["jobEndDelay"] = ""
+
+            delete_all_elements(scheduled_jobs_in_cur_iter)
+            ml1.machine_groups = []
+            print(max_machine_duration)
+            if max_machine_duration[0] < df['duration_machine'].max().total_seconds():
+                delete_all_elements(max_machine_duration)
+                max_machine_duration.append(df['duration_machine'].max().total_seconds())
+
         print("Deadline exceeded for these many jobs: ", len(deadlin_exceeded))
         print("Sum of deadline delays: ", sum(deadlin_exceeded))
         print("Start delay for these many jobs: ", len(job_start_delays))
         print("Sum of job start delays: ", sum(job_start_delays))
-        makespan = get_makespan(job_list)
-        makespans.append(makespan)
-        print("Makespan: ", makespan)
-
-        # Do this for the next manufacturing layer
-        if grouping:
-            for job in job_list:
-                job["selected_machine"] = ""
-                job["order_release"] = job["calculated_end"]
-                job["calculated_start"] = ""
-                job["calculated_end"] = ""      
-                job["jobStartDelay"] = ""
-                job["jobEndDelay"] = ""
-
-        total_job_start_delays.append(job_start_delays)
-        total_deadlin_exceeded.append(deadlin_exceeded)
+        total_job_start_delays.append(sum(job_start_delays))
+        total_deadlin_exceeded.append(sum(deadlin_exceeded))
         delete_all_elements(job_start_delays)
         delete_all_elements(deadlin_exceeded)
+        print("Total makespan: ", sum(makespans_cur_iter))
+        makespans.append(sum(makespans_cur_iter))
+        delete_all_elements(scheduled_jobs)
+        delete_all_elements(makespans_cur_iter)
 
     endtime = time.time()
     print("Simpy Simulation End")
-    print("Simpy Simulation Time:",endtime - starttime)
-    return makespans[0]
+    print("Simpy Simulation Time: ",endtime - starttime)
+    # print(scheduled_jobs)
+    return makespans, total_deadlin_exceeded
 
 if __name__ == "__main__":
     df = orders.get_westaflex_orders()

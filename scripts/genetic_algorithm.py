@@ -2,6 +2,7 @@
 from shift import ShiftModel
 import orders
 import numpy as np
+import matplotlib.pyplot as plt
 from genetic_helperfunctions import makespan, average_lateness
 from simpy_simulation import main
 
@@ -33,17 +34,19 @@ class MyProblem(ElementwiseProblem):
     def __init__(self):
         super().__init__(
                          n_var=amount_of_var,
-                         n_obj=2,
+                         n_obj=1,
                          n_ieq_constr=0, # constrains auf zero if we dont need them 
                          )
 
     def _evaluate(self, x, out, *args, **kwargs):
 #         f1 = -abs(makespan(ids=x, decider="genetic"))
-        f1 = -abs(main(ids=x))
-        f2 = average_lateness(ids=x, decider="genetic")
+        o1, o2 = main(ids=x)
+        f1 = abs(o1[0])
+        f2 = -abs(o2[0])
+        # f2 = average_lateness(ids=x, decider="genetic")
 
 
-        out["F"] = [f1, f2]
+        out["F"] = [f1]
 
 def main_algorithm(gen_amount = 5):
     
@@ -69,7 +72,16 @@ def main_algorithm(gen_amount = 5):
                 termination,
                 seed=1,
                 display=None,
+                save_history=True
                 )
+
+    n_evals = np.array([e.evaluator.n_eval for e in res.history])
+    opt = np.array([e.opt[0].F for e in res.history])
+    print("opt",opt)
+    plt.title("Convergence")
+    plt.plot(n_evals, opt, "--")
+    plt.yscale("log")
+    plt.show()
 
     X = res.X
     F = res.F
@@ -77,7 +89,6 @@ def main_algorithm(gen_amount = 5):
     print("end")
     return output, 
     
-
 
 
 '''if __name__ == "__main__":
