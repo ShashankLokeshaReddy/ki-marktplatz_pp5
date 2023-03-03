@@ -48,9 +48,9 @@ export default {
         { make: "Ford", model: "Mondeo", price: 32000 },
         { make: "Porsche", model: "Boxster", price: 72000 },
       ];*/
-      fetch('http://localhost:8000/api/jobs/')
+      fetch('http://localhost:8000/api/jobs/getSchedule')
         .then(res => res.json())
-        .then(rowData => this.rowData = rowData)
+        .then(rowData => this.rowData = rowData["Table"])
         .catch(error => console.log(error));
     },
     

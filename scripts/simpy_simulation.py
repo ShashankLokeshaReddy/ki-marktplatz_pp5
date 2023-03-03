@@ -75,6 +75,17 @@ class MachineGroup:
                         available_machines.append(machine)
         return available_machines 
 
+    def get_available_operators(self, operators):
+        available_operators = []
+        for operator in self.operators:
+            if operator.is_available():
+                if grouping:
+                    available_operators.append(operator)
+                else:
+                    if operator.name in operators:
+                        available_operators.append(operator)
+        return available_operators 
+
     def run_job(self, job):
         release_time = string_to_timestamp(job["order_release"]) # "2021-09-01 00:00:00"
         earliest_prod_start_time = self.env.now
@@ -118,18 +129,18 @@ class MachineGroup:
         yield machine_request
 
         start = self.env.now
-        job["calculated_start"] = datetime.fromtimestamp(start).strftime("%Y-%m-%d %H:%M:%S")
+        job["final_start"] = datetime.fromtimestamp(start).strftime("%Y-%m-%d %H:%M:%S")
         job["selected_machine"] = chosen_machine.name
-        # print(f"Job {job['job']} on Machine {job['selected_machine']} starts at {job['calculated_start']}")
+        # print(f"Job {job['job']} on Machine {job['selected_machine']} starts at {job['final_start']}")
          
         yield self.env.timeout(duration_machine)
-        job["calculated_end"] = datetime.fromtimestamp(self.env.now).strftime("%Y-%m-%d %H:%M:%S")
+        job["final_end"] = datetime.fromtimestamp(self.env.now).strftime("%Y-%m-%d %H:%M:%S")
 
-        # print(f"Job {job['job']} on Machine {job['selected_machine']} ends at {job['calculated_end']}")
+        # print(f"Job {job['job']} on Machine {job['selected_machine']} ends at {job['final_end']}")
         chosen_machine.machine.release(machine_request)
 
-        start_time_comp = string_to_timestamp(job["calculated_start"])
-        end_time_comp = string_to_timestamp(job["calculated_end"])
+        start_time_comp = string_to_timestamp(job["final_start"])
+        end_time_comp = string_to_timestamp(job["final_end"])
         deadline_comp = string_to_timestamp(job["deadline"])
 
         if start_time_comp < release_time:
@@ -197,11 +208,11 @@ def get_makespan(job_list):
     min_start = None
     max_end = None
     for job in job_list:
-        if not pd.isna(job["calculated_start"]):
-            if not min_start or string_to_timestamp(job["calculated_start"]) < min_start:
-                min_start = string_to_timestamp(job["calculated_start"])
-            if not max_end or string_to_timestamp(job["calculated_end"]) > max_end:
-                max_end = string_to_timestamp(job["calculated_end"])
+        if not pd.isna(job["final_start"]):
+            if not min_start or string_to_timestamp(job["final_start"]) < min_start:
+                min_start = string_to_timestamp(job["final_start"])
+            if not max_end or string_to_timestamp(job["final_end"]) > max_end:
+                max_end = string_to_timestamp(job["final_end"])
     if min_start != None and max_end != None:
         return (max_end - min_start).total_seconds()
     else:
@@ -236,12 +247,12 @@ def get_desired_start(job_list):
 
     return desired_start_date.strftime('%Y-%m-%d %H:%M:%S')
 
-def calculated_end_max(scheduled_jobs):
+def final_end_max(scheduled_jobs):
     max_timestamp = 0
     if scheduled_jobs != []:
         for item in scheduled_jobs:
-            if string_to_timestamp(item["calculated_end"]).timestamp() > max_timestamp:
-                max_timestamp = string_to_timestamp(item["calculated_end"]).timestamp()
+            if string_to_timestamp(item["final_end"]).timestamp() > max_timestamp:
+                max_timestamp = string_to_timestamp(item["final_end"]).timestamp()
 
     return max_timestamp
 
@@ -268,10 +279,10 @@ def main(ids):
             if scheduled_jobs == []: # give 11.6 days buffer for 1st batch jobs
                 desired_start_date = string_to_timestamp(desired_start_date).timestamp() - df['duration_machine'].max().total_seconds()
             if scheduled_jobs != []: # no buffer for the next batch jobs
-                end_max = calculated_end_max(scheduled_jobs)
+                end_max = final_end_max(scheduled_jobs)
                 print(desired_start_date, end_max)
                 desired_start_date = max(string_to_timestamp(desired_start_date).timestamp(), end_max)
-                print(f"calculated_end_max time for the scheduled batch of jobs: {datetime.fromtimestamp(end_max)}")
+                print(f"final_end_max time for the scheduled batch of jobs: {datetime.fromtimestamp(end_max)}")
             print(f"Desired start time for the batch of jobs: {datetime.fromtimestamp(desired_start_date)}")
 
             env = simpy.Environment(initial_time = desired_start_date)
@@ -312,9 +323,9 @@ def main(ids):
             if grouping:
                 for job in job_list:
                     job["selected_machine"] = ""
-                    job["order_release"] = job["calculated_end"]
-                    job["calculated_start"] = ""
-                    job["calculated_end"] = ""
+                    job["order_release"] = job["final_end"]
+                    job["final_start"] = ""
+                    job["final_end"] = ""
                     job["jobStartDelay"] = ""
                     job["jobEndDelay"] = ""
 
@@ -341,14 +352,14 @@ def main(ids):
     endtime = time.time()
     print("Simpy Simulation End")
     print("Simpy Simulation Time: ",endtime - starttime)
-    # print(scheduled_jobs)
+    print(job_list)
     return makespans, total_deadlin_exceeded
 
 if __name__ == "__main__":
     df = orders.get_westaflex_orders()
 
     sorting_tech = "deadline"
-    # # baseline approaches, presorts the joblist
+    # baseline approaches, presorts the joblist
     if sorting_tech == "SJF":
         df = df.sort_values(by='duration_machine')
         ids = list(df.index)
@@ -364,4 +375,5 @@ if __name__ == "__main__":
     elif sorting_tech == "random":
         ids = df.sample(frac=1, random_state=42).index.to_list()
 
-    makespans = main(ids)
+    makespans, total_deadlin_exceeded = main(ids)
+    print(makespans, total_deadlin_exceeded)

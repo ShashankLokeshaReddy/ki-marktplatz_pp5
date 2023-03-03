@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from genetic_helperfunctions import makespan, average_lateness
 from simpy_simulation import main
+import pandas as pd
 
 import time
 
@@ -34,7 +35,7 @@ class MyProblem(ElementwiseProblem):
     def __init__(self):
         super().__init__(
                          n_var=amount_of_var,
-                         n_obj=1,
+                         n_obj=2,
                          n_ieq_constr=0, # constrains auf zero if we dont need them 
                          )
 
@@ -42,18 +43,18 @@ class MyProblem(ElementwiseProblem):
 #         f1 = -abs(makespan(ids=x, decider="genetic"))
         o1, o2 = main(ids=x)
         f1 = abs(o1[0])
-        f2 = -abs(o2[0])
+        f2 = abs(o2[0])
         # f2 = average_lateness(ids=x, decider="genetic")
 
 
-        out["F"] = [f1]
+        out["F"] = [f1, f2]
 
-def main_algorithm(gen_amount = 5):
+def main_algorithm(gen_amount = 50):
     
     print("Start")
     problem = MyProblem()
     algorithm = NSGA2(
-                        pop_size=30,
+                        pop_size=50,
                         pop=id_init,
                         mutation=InversionMutation(),
                         #crossover=SBX(prob=0.9, eta=15),
@@ -74,21 +75,26 @@ def main_algorithm(gen_amount = 5):
                 display=None,
                 save_history=True
                 )
-
+    
     n_evals = np.array([e.evaluator.n_eval for e in res.history])
+    X_opt = np.array([e.opt[0].X for e in res.history])
     opt = np.array([e.opt[0].F for e in res.history])
-    print("opt",opt)
-    plt.title("Convergence")
+    plt.title("GA_Convergence")
     plt.plot(n_evals, opt, "--")
     plt.yscale("log")
     plt.show()
 
+    data = np.column_stack((X_opt, opt))
+    header = 'X,F'
+    np.savetxt('GA_Convergence.csv', data, delimiter=',', header=header, fmt='%f', comments='')
+
     X = res.X
     F = res.F
     output = [X,F]
-    print("end")
+
     return output, 
     
+
 
 
 '''if __name__ == "__main__":

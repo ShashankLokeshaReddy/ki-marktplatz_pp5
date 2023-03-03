@@ -55,6 +55,15 @@ class JobsViewSet(ModelViewSet):
                 pass
         return Response(status=status.HTTP_200_OK)
 
+    # runs genetic optimizer
+    @action(detail=False, methods=['post'])
+    def run_genetic_optimizer(self, request):
+        # implement your genetic optimizer logic here
+        schedule = Job.objects.all()
+        serializer = JobsSerializer(schedule, many=True)
+        jobs = serializer.data
+        # return any relevant data as a JSON response
+        return Response({'message': 'Genetic optimizer complete.'})
 
     # @action(methods=['put'], detail=True)
     # def update_entry(self, request, pk=None):
