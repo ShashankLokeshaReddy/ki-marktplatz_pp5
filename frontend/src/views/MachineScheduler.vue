@@ -35,6 +35,8 @@ export default defineComponent({
                     ListPlugin,
                     ResourceTimelinePlugin,
             ],
+            selectOverlap: false,
+            eventOverlap: false,
             eventMaxStack: 3,
             slotDuration: '00:05:00',
             locale: "ger",

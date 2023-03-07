@@ -257,7 +257,9 @@ def final_end_max(scheduled_jobs):
     return max_timestamp
 
 
-def main(ids):
+def main(ids, input_jobs=None):
+    print("ids",ids, input_jobs)
+
     total_job_start_delays = []
     total_deadlin_exceeded = []
     makespans = []
@@ -352,7 +354,7 @@ def main(ids):
     endtime = time.time()
     print("Simpy Simulation End")
     print("Simpy Simulation Time: ",endtime - starttime)
-    print(job_list)
+    # print(job_list)
     return makespans, total_deadlin_exceeded
 
 if __name__ == "__main__":

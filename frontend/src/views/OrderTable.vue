@@ -1,18 +1,21 @@
 <template>
+
+  <v-container align="center">
+    <v-btn class="flex-grow-1" @click="runGeneticOptimizer">Genetic Optimizer</v-btn>
+    <v-btn class="flex-grow-1" @click="runSJF">SJF</v-btn>
+  </v-container>
+
   <v-container fluid justify="center" align="center">
-  <ag-grid-vue
-    style="width: 1200px; height: 30rem;"
-    class="ag-theme-alpine"
-    :columnDefs="columnDefs"
-    :rowData="rowData"
-    display = "flex"
-    rowSelection="multiple"
-    alignItems="start"
-   
-    
-  >
-  </ag-grid-vue>
-</v-container>
+    <ag-grid-vue
+      style="width: 1200px; height: 30rem;"
+      class="ag-theme-alpine"
+      :columnDefs="columnDefs"
+      :rowData="rowData"
+      display = "flex"
+      rowSelection="multiple"
+      alignItems="start">
+    </ag-grid-vue>
+  </v-container>
 
 </template>
 
@@ -21,6 +24,7 @@ import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 import { AgGridVue } from "ag-grid-vue3";
 import { reactive } from '@vue/reactivity';
+import axios from 'axios';
 
 export default {
   data(){
@@ -52,7 +56,21 @@ export default {
         .then(res => res.json())
         .then(rowData => this.rowData = rowData["Table"])
         .catch(error => console.log(error));
-    },
-    
+  },
+
+  methods: {
+    runGeneticOptimizer() {
+      alert('Der genetische Algorithmus optimiert im Hintergrund die Fahrpläne!');
+      axios.post('http://localhost:8000/api/jobs/run_genetic_optimizer/')
+        .then(response => {
+          console.log(response.data); // log the response data to the console
+          alert('Abgeschlossener genetischer Optimierer.');
+        })
+        .catch(error => {
+          console.log(error); // log any errors to the console
+        });
+    }
+  }
+
   }
 </script>

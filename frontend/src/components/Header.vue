@@ -7,9 +7,6 @@
           <v-btn align="end" @click="hideToggle" color="success" to="/table">Tabelle</v-btn>
         </v-btn-toggle>
       </v-col>
-      <v-col class="text-right" align="center">
-        <v-btn @click="runGeneticOptimizer">Run Genetic Optimizer</v-btn>
-      </v-col>
     </v-row>
   </v-container>
 
@@ -34,17 +31,6 @@ export default {
     },
     hideToggle() {
       document.getElementById('my-toggle').hidden=true;
-    },
-    runGeneticOptimizer() {
-      alert('Der genetische Algorithmus optimiert im Hintergrund die Fahrpläne!');
-      axios.post('http://localhost:8000/api/jobs/run_genetic_optimizer/')
-        .then(response => {
-          console.log(response.data); // log the response data to the console
-          alert('Abgeschlossener genetischer Optimierer.');
-        })
-        .catch(error => {
-          console.log(error); // log any errors to the console
-        });
     }
   }
 };

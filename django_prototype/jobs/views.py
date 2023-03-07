@@ -8,10 +8,19 @@ from rest_framework.response import Response
 from .models import Job
 from .serializer import JobsSerializer
 
+import os
 import sys
-sys.path.append('...')
+
+parent_dir_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(parent_dir_path)
+print("parent_dir_path",parent_dir_path)
 from details.models import Detail
 from details.serializer import DetailsSerializer
+
+scripts_dir_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..','scripts'))
+print("scripts_dir_path",scripts_dir_path)
+sys.path.append(scripts_dir_path)
+from genetic_algorithm import MyProblem, main_algorithm
 
 
 class JobsViewSet(ModelViewSet):
@@ -61,8 +70,14 @@ class JobsViewSet(ModelViewSet):
         # implement your genetic optimizer logic here
         schedule = Job.objects.all()
         serializer = JobsSerializer(schedule, many=True)
-        jobs = serializer.data
+        input_jobs = serializer.data
         # return any relevant data as a JSON response
+        # new_key_names = {'resourceId': 'selected_machine', 'jobID': 'job', 'partID': 'item', 'start': 'order_release', 'end': 'deadline', 'productionStart': 'production_start_time', 'productionEnd': 'production_end_time'}
+        # new_list = []
+        # for od in ordered_dict_list:
+        #     new_dict = {new_key_names[k]: v for k, v in od.items()}
+        #     new_list.append(new_dict)
+        output = main_algorithm(input_jobs=input_jobs)
         return Response({'message': 'Genetic optimizer complete.'})
 
     # @action(methods=['put'], detail=True)

@@ -22,39 +22,42 @@ from pymoo.optimize import minimize
 
 
 #z=1
-
-
-
-id_init = list(orders.get_westaflex_orders().index)
-amount_of_var = len(id_init)
+jobs_from_db = True
 #y=np.array(id_init)
 
 
 class MyProblem(ElementwiseProblem):
 
-    def __init__(self):
+    def __init__(self, input_jobs, n_var):
         super().__init__(
-                         n_var=amount_of_var,
                          n_obj=2,
                          n_ieq_constr=0, # constrains auf zero if we dont need them 
                          )
+        self.input_jobs = input_jobs
+        self.n_var = n_var
 
     def _evaluate(self, x, out, *args, **kwargs):
-#         f1 = -abs(makespan(ids=x, decider="genetic"))
-        o1, o2 = main(ids=x)
+        o1, o2 = main(ids=x, input_jobs=self.input_jobs)
         f1 = abs(o1[0])
         f2 = abs(o2[0])
-        # f2 = average_lateness(ids=x, decider="genetic")
-
 
         out["F"] = [f1, f2]
 
-def main_algorithm(gen_amount = 50):
+def main_algorithm(gen_amount = 5, input_jobs = None):
     
     print("Start")
-    problem = MyProblem()
+    
+    if not jobs_from_db:
+        id_init = list(orders.get_westaflex_orders().index)
+        input_jobs = orders.get_westaflex_orders()
+    else:
+        id_init = np.linspace(0, len(input_jobs)-1, num=len(input_jobs)).tolist()
+    print("id_init: ",id_init)
+    amount_of_var = len(id_init)
+
+    problem = MyProblem(input_jobs=input_jobs, n_var=amount_of_var)
     algorithm = NSGA2(
-                        pop_size=50,
+                        pop_size=1,
                         pop=id_init,
                         mutation=InversionMutation(),
                         #crossover=SBX(prob=0.9, eta=15),
@@ -86,7 +89,7 @@ def main_algorithm(gen_amount = 50):
 
     data = np.column_stack((X_opt, opt))
     header = 'X,F'
-    np.savetxt('GA_Convergence.csv', data, delimiter=',', header=header, fmt='%f', comments='')
+    # np.savetxt('GA_Convergence.csv', data, delimiter=',', header=header, fmt='%f', comments='')
 
     X = res.X
     F = res.F
