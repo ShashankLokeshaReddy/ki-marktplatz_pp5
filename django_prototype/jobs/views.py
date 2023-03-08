@@ -72,7 +72,7 @@ class JobsViewSet(ModelViewSet):
         serializer = JobsSerializer(schedule, many=True)
         input_jobs = serializer.data
         # return any relevant data as a JSON response
-        # new_key_names = {'resourceId': 'selected_machine', 'jobID': 'job', 'partID': 'item', 'start': 'order_release', 'end': 'deadline', 'productionStart': 'production_start_time', 'productionEnd': 'production_end_time'}
+        # new_key_names = {'resourceId': 'selected_machine', 'jobID': 'job', 'partID': 'item', 'start': 'order_release', 'end': 'deadline', 'productionStart': 'final_start', 'productionEnd': 'final_end'}
         # new_list = []
         # for od in ordered_dict_list:
         #     new_dict = {new_key_names[k]: v for k, v in od.items()}
