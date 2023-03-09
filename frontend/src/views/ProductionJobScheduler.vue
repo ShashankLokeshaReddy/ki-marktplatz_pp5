@@ -50,7 +50,7 @@ export default defineComponent({
                 text: 'speichern',
                 click: function() {
                     alert('Der Plan wurde gespeichert!');
-                    var current_events: { resourceId : string; title: string; start: Date; end: Date; }[]
+                    var current_events: { selected_machine : string; title: string; start: Date; end: Date; }[]
                     //current_events = this.getEvents(); //genau hier ist das Problem, dass es scheinbar keine Events bekommt.
                     (async () => {
                         const rawResponse = await fetch('https://httpbin.org/post', {
@@ -92,6 +92,7 @@ export default defineComponent({
                 let offset_end = view_end.getTimezoneOffset();
                 let gmtTime_view_end = new Date(view_end.getTime() + offset_end * 60 * 1000);
                 var resources = info.event.getResources();
+                console.log("info.event",info.event)
                 var all_events = resources[0].getEvents()
                 var bck_event
                 for (let i = 0; i < all_events.length; i++) {
@@ -162,8 +163,8 @@ export default defineComponent({
                 else{
                     info.el.style.background = `blue`;
                 }
-
-                const jobs_data = [{"jobID": bck_event.title, "productionStart": info.event.start, "productionEnd": info.event.end}];
+                const duration_machine = info.event.end - info.event.start
+                const jobs_data = [{"job": bck_event.title, "duration_machine":duration_machine, "final_start": info.event.start, "final_end": info.event.end}];
 
                 axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
                 .then(response => {
@@ -211,7 +212,7 @@ export default defineComponent({
                     info.el.style.background = `blue`;
                 }
 
-                const jobs_data = [{"jobID": bck_event.title, "productionStart": info.event.start, "productionEnd": info.event.end}];
+                const jobs_data = [{"job": bck_event.title, "final_start": info.event.start, "final_end": info.event.end}];
 
                 axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
                 .then(response => {
@@ -238,17 +239,17 @@ export default defineComponent({
             var response = await fetch('http://localhost:8000/api/jobs/getSchedule')
             var output_resp = await response.json()
             var status = output_resp["Status"]
-            var output : { resourceId: string; jobID: string; partID: string; start: Date, end: Date, productionStart: Date, productionEnd: Date }[] = [];
+            var output : { selected_machine: string; job: string; item: string; start: Date, end: Date, final_start: Date, final_end: Date }[] = [];
             output = output_resp["Table"]
             
             var events_var = []
             for (var i = 0; i < output.length; ++i) {
-                if(output[i]["productionEnd"]===null){
-                    output[i]["productionEnd"] = output[i]["end"]
+                if(output[i]["final_end"]===null){
+                    output[i]["final_end"] = output[i]["end"]
                 }
                 var bck_event = {
-                    "resourceId":output[i]["jobID"],
-                    "title":output[i]["jobID"],
+                    "resourceId":output[i]["job"],
+                    "title":output[i]["job"],
                     "start":output[i]["start"],
                     "end":output[i]["end"],
                     "eventColor":"green",
@@ -256,10 +257,10 @@ export default defineComponent({
                     "className": "bck"
                 };
                 var temp_event = {
-                    "resourceId":output[i]["jobID"],
-                    "title":output[i]["resourceId"],
-                    "start":output[i]["productionStart"],
-                    "end":output[i]["productionEnd"],
+                    "resourceId":output[i]["job"],
+                    "title":output[i]["selected_machine"],
+                    "start":output[i]["final_start"],
+                    "end":output[i]["final_end"],
                     "eventColor":"blue",
                     "display":'auto',
                     "className": "fwd"
@@ -308,13 +309,13 @@ export default defineComponent({
             var resources_var: { id: string; title: string }[] = [];
             for (var i = 0; i < output.length; ++i) {
                 var temp_res = {
-                    "id":output[i]["jobID"],
-                    "title":output[i]["jobID"]
+                    "id":output[i]["job"],
+                    "title":output[i]["job"]
                 };
                 resources_var.push(temp_res);
             }
             /*output = [{
-               "resourceId": "SL 2",
+               "selected_machine": "SL 2",
                 "title": "12403",
                 "start": new Date("2016-02-26T11:54:52Z"),
                 "end": new Date("2022-09-13T14:10:06Z")

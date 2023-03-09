@@ -2,11 +2,14 @@ import simpy
 import random
 from datetime import datetime
 import pandas as pd
+from pandas import Timestamp, Timedelta
 import pendulum
 import orders
 from genetic_helperfunctions import makespan, average_lateness, machineslist, start, end
 import json
+import csv
 import time
+import collections
 
 grouping = False
 max_machine_duration_flag = [False]
@@ -135,6 +138,7 @@ class MachineGroup:
          
         yield self.env.timeout(duration_machine)
         job["final_end"] = datetime.fromtimestamp(self.env.now).strftime("%Y-%m-%d %H:%M:%S")
+        job["duration_machine"] = string_to_timestamp(job["final_end"]) - string_to_timestamp(job["final_start"])
 
         # print(f"Job {job['job']} on Machine {job['selected_machine']} ends at {job['final_end']}")
         chosen_machine.machine.release(machine_request)
@@ -150,20 +154,24 @@ class MachineGroup:
         if start_time_comp > release_time:
             job["jobStartDelay"] = (start_time_comp - release_time).total_seconds()
             job_start_delays.append(job["jobStartDelay"])
+        else:
+            job["jobStartDelay"] = 0
         
         if end_time_comp > deadline_comp:
             job["jobEndDelay"] = (end_time_comp - deadline_comp).total_seconds()
             deadlin_exceeded.append(job["jobEndDelay"])
+        else:
+            job["jobEndDelay"] = 0
 
         job["order_release"] = job["order_release"].strftime('%Y-%m-%d %H:%M:%S')
-        job["setuptime_material"] = job["setuptime_material"].total_seconds()
-        job["setuptime_coil"] = job["setuptime_coil"].total_seconds()
-        job["duration_machine"] = job["duration_machine"].total_seconds()
-        job["duration_manual"] = job["duration_manual"].total_seconds()
+        # job["setuptime_material"] = job["setuptime_material"].total_seconds()
+        # job["setuptime_coil"] = job["setuptime_coil"].total_seconds()
+        # job["duration_machine"] = job["duration_machine"].total_seconds()
+        # job["duration_manual"] = job["duration_manual"].total_seconds()
         job["deadline"] = job["deadline"].strftime('%Y-%m-%d %H:%M:%S')
         job["latest_start"] = job["latest_start"].strftime('%Y-%m-%d %H:%M:%S')
-        job["setup_time"] = job["setup_time"].total_seconds()
-        job["status"] = job["status"].value
+        # job["setup_time"] = job["setup_time"].total_seconds()
+        # job["status"] = job["status"].value
         
         scheduled_jobs.append(job)
         scheduled_jobs_in_cur_iter.append(job)
@@ -230,11 +238,13 @@ def get_desired_start(job_list):
         setup_time = job['setup_time']
         job_duration = job['duration_machine']
         latest_start_time = job['deadline'] - job_duration #- setup_time
-        
+        job['latest_start'] = latest_start_time
+
         if desired_start_date == None:
             desired_start_date = latest_start_time
         if latest_start_time < desired_start_date:
             desired_start_date = latest_start_time
+        
         # if string_to_timestamp(job['deadline']).timestamp() < string_to_timestamp(desired_start_date.strftime('%Y-%m-%d %H:%M:%S')).timestamp() + max_machine_duration[0]:
         #     print("Before",job['job'] , string_to_timestamp(job['deadline']).timestamp() , string_to_timestamp(desired_start_date.strftime('%Y-%m-%d %H:%M:%S')).timestamp() , max_machine_duration[0])
         #     delete_all_elements(max_machine_duration)
@@ -256,9 +266,32 @@ def final_end_max(scheduled_jobs):
 
     return max_timestamp
 
+def convert_list_to_json(input_list):
+    output_list = []
+    for job in input_list:
+        output_dict = {}
+        for key, value in job.items():
+            if value is None:  # Check for null values
+                output_dict[key] = None
+            elif key in ['job', 'selected_machine']:
+                output_dict[key] = int(value)
+            elif key in ['start', 'end', 'latest_start', 'calculated_start', 'calculated_end', 'planned_start', 'planned_end', 'final_start', 'final_end']:
+                value = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                output_dict[key] = Timestamp(value.strftime('%Y-%m-%d %H:%M:%S'))
+            elif key in ['setuptime_material', 'setuptime_coil', 'duration_machine', 'duration_manual', 'setup_time']:
+                output_dict[key] = Timedelta(value)
+            # elif key == 'status':
+            #     output_dict[key] = JobStatus[value]
+            else:
+                output_dict[key] = value
+        output_dict['order_release'] = output_dict.pop('start')
+        output_dict['deadline'] = output_dict.pop('end')
+        output_list.append(output_dict)
+    return output_list
 
-def main(ids, input_jobs=None):
-    print("ids",ids, input_jobs)
+def main(ids, input_jobs):
+    if isinstance(input_jobs, list) and all(isinstance(job, collections.OrderedDict) for job in input_jobs):
+        input_jobs = convert_list_to_json(input_jobs)
 
     total_job_start_delays = []
     total_deadlin_exceeded = []
@@ -267,7 +300,7 @@ def main(ids, input_jobs=None):
     max_machine_duration.append(max_machine_duration_default)
     starttime = time.time()
     print("Simpy Simulation Start")
-    df = orders.get_westaflex_orders()
+    df = pd.DataFrame(input_jobs)
     df = df.reindex(ids)
     job_list = df.to_dict(orient='records')
     ml1 = ManufacturingLayer()
@@ -355,27 +388,48 @@ def main(ids, input_jobs=None):
     print("Simpy Simulation End")
     print("Simpy Simulation Time: ",endtime - starttime)
     # print(job_list)
-    return makespans, total_deadlin_exceeded
+
+    # Replace NaT with empty strings
+    for item in job_list:
+        for key, value in item.items():
+            if isinstance(value, str):
+                continue
+            elif pd.isna(value):
+                item[key] = ""
+            elif key in ['start', 'end', 'latest_start', 'calculated_start', 'calculated_end', 'planned_start', 'planned_end', 'final_start', 'final_end']:
+                value = pd.to_datetime(value)
+        item.update({'start': item.pop('order_release')})
+        item.update({'end': item.pop('deadline')})
+
+    with open('data.csv', 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow(job_list[0].keys())
+        for item in job_list:
+            writer.writerow(item.values())
+
+    return makespans, total_deadlin_exceeded, job_list
 
 if __name__ == "__main__":
-    df = orders.get_westaflex_orders()
+    df_init = orders.get_westaflex_orders()
 
     sorting_tech = "deadline"
     # baseline approaches, presorts the joblist
     if sorting_tech == "SJF":
-        df = df.sort_values(by='duration_machine')
+        df = df_init.sort_values(by='duration_machine')
         ids = list(df.index)
     elif sorting_tech == "LJF":
-        df = df.sort_values(by='duration_machine', ascending=False)
+        df = df_init.sort_values(by='duration_machine', ascending=False)
         ids = list(df.index)
     elif sorting_tech == "deadline":
-        df = df.sort_values(by='deadline')
+        df = df_init.sort_values(by='deadline')
         ids = list(df.index)
     elif sorting_tech == "releasedate":
-        df = df.sort_values(by='order_release')
+        df = df_init.sort_values(by='order_release')
         ids = list(df.index)
     elif sorting_tech == "random":
-        ids = df.sample(frac=1, random_state=42).index.to_list()
+        ids = df_init.sample(frac=1, random_state=42).index.to_list()
 
-    makespans, total_deadlin_exceeded = main(ids)
+    job_list = df_init.to_dict(orient='records')
+
+    makespans, total_deadlin_exceeded, job_list = main(ids=ids, input_jobs=job_list)
     print(makespans, total_deadlin_exceeded)

@@ -31,7 +31,7 @@ class Command(BaseCommand):
         
         df = df[df["MaschNr"].str.contains("SL 2|SL 4|SL 5|SL 6|SL 7|SL 8|SL 9|SL 10|SL 11|FKM") == True]
         df = df.dropna()
-        df.rename(columns={'MaschNr':'resourceId'}, inplace=True)
+        df.rename(columns={'MaschNr':'selected_machine'}, inplace=True)
         df = df.head(n=250000)#, if you want to take the first n rows of the dataset
         
         print(df)

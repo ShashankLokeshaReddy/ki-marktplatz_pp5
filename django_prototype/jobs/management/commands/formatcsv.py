@@ -12,7 +12,7 @@ class Command(BaseCommand):
     #We only keep the rows necessary to us
         df = pd.read_csv("../data/autragsdatenbank_westaflex_00_initial.csv")
 
-        df = df[['jobID','machineID', 'partID', 'jobInputDate', 'deadlineDate','productionStart','productionEnd']]
+        df = df[['job','machineID', 'item', 'order_release', 'deadline','final_start','final_end']]
 
         #Deleting the unnecessary endings for the SL and FKM identifiers
 
@@ -31,7 +31,7 @@ class Command(BaseCommand):
         
         df = df[df["machineID"].str.contains("SL 2|SL 4|SL 5|SL 6|SL 7|SL 8|SL 9|SL 10|SL 11|FKM") == True]
         df = df.dropna()
-        df.rename(columns={'machineID':'resourceId'}, inplace=True)
+        df.rename(columns={'machineID':'selected_machine'}, inplace=True)
         df = df.head(n=250000)#, if you want to take the first n rows of the dataset
         
         print(df)

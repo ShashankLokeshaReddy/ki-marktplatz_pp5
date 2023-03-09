@@ -2,14 +2,6 @@ from django.db import models
 
 # Create your models here.
 class Job(models.Model):
-    # jobID = models.CharField(max_length=140, null=True)
-    # resourceId = models.CharField(max_length=140, null=True)
-    # partID = models.CharField(max_length=140, null=True)
-    # jobInputDate = models.DateTimeField(null=True)
-    # deadlineDate = models.DateTimeField(null=True)
-    # productionStart = models.DateTimeField(null=True)
-    # productionEnd = models.DateTimeField(null=True)
-
     job = models.CharField(max_length=140, null=True)
     item = models.CharField(max_length=140, null=True)
     order_release = models.DateTimeField(null=True)
@@ -31,7 +23,7 @@ class Job(models.Model):
     planned_end = models.DateTimeField(null=True)
     final_start = models.DateTimeField(null=True)
     final_end = models.DateTimeField(null=True)
-    setuptime = models.CharField(max_length=140, null=True)
+    setup_time = models.CharField(max_length=140, null=True)
     status = models.CharField(max_length=140, null=True)
 
     #def __str__(self):

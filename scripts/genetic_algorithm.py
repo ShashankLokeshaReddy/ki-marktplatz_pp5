@@ -34,14 +34,16 @@ class MyProblem(ElementwiseProblem):
                          n_ieq_constr=0, # constrains auf zero if we dont need them 
                          )
         self.input_jobs = input_jobs
+        self.output_jobs = None
         self.n_var = n_var
 
     def _evaluate(self, x, out, *args, **kwargs):
-        o1, o2 = main(ids=x, input_jobs=self.input_jobs)
+        o1, o2, self.output_jobs = main(ids=x, input_jobs=self.input_jobs)
         f1 = abs(o1[0])
         f2 = abs(o2[0])
 
         out["F"] = [f1, f2]
+
 
 def main_algorithm(gen_amount = 5, input_jobs = None):
     
@@ -52,7 +54,6 @@ def main_algorithm(gen_amount = 5, input_jobs = None):
         input_jobs = orders.get_westaflex_orders()
     else:
         id_init = np.linspace(0, len(input_jobs)-1, num=len(input_jobs)).tolist()
-    print("id_init: ",id_init)
     amount_of_var = len(id_init)
 
     problem = MyProblem(input_jobs=input_jobs, n_var=amount_of_var)
@@ -93,9 +94,9 @@ def main_algorithm(gen_amount = 5, input_jobs = None):
 
     X = res.X
     F = res.F
-    output = [X,F]
+    output = [X, F, problem.output_jobs]
 
-    return output, 
+    return output 
     
 
 

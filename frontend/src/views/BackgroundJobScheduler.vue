@@ -131,7 +131,7 @@ export default defineComponent({
                 let calendar: any = this.$refs.calendar.getApi();
                 let currentView = calendar.view;
                 calendar.changeView(currentView.type);
-                const jobs_data = [{"jobID": info.event.title, "start": info.event.start, "end": info.event.end}];
+                const jobs_data = [{"job": info.event.title, "start": info.event.start, "end": info.event.end}];
 
                 axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
                 .then(response => {
@@ -147,7 +147,7 @@ export default defineComponent({
                 let calendar: any = this.$refs.calendar.getApi();
                 let currentView = calendar.view;
                 calendar.changeView(currentView.type);
-                const jobs_data = [{"jobID": info.event.title, "start": info.event.start, "end": info.event.end}];
+                const jobs_data = [{"job": info.event.title, "start": info.event.start, "end": info.event.end}];
 
                 axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
                 .then(response => {
@@ -174,27 +174,27 @@ export default defineComponent({
             var response = await fetch('http://localhost:8000/api/jobs/getSchedule')
             var output_resp = await response.json()
             var status = output_resp["Status"]
-            var output : { resourceId: string; jobID: string; partID: string; start: Date, end: Date, productionStart: Date, productionEnd: Date }[] = [];
+            var output : { resourceId: string; job: string; item: string; start: Date, end: Date, final_start: Date, final_end: Date }[] = [];
             output = output_resp["Table"]
             
             var events_var = []
             for (var i = 0; i < output.length; ++i) {
-                if(output[i]["productionEnd"]===null){
-                    output[i]["productionEnd"] = output[i]["end"]
+                if(output[i]["final_end"]===null){
+                    output[i]["final_end"] = output[i]["end"]
                 }
                 var bck_event = {
-                    "resourceId":output[i]["jobID"],
-                    "title":output[i]["jobID"],
+                    "resourceId":output[i]["job"],
+                    "title":output[i]["job"],
                     "start":output[i]["start"],
                     "end":output[i]["end"],
                     "eventColor":"green",
                     "className": "bck"
                 };
                 var temp_event = {
-                    "resourceId":output[i]["jobID"],
-                    "title":output[i]["resourceId"],
-                    "start":output[i]["productionStart"],
-                    "end":output[i]["productionEnd"],
+                    "resourceId":output[i]["job"],
+                    "title":output[i]["selected_machine"],
+                    "start":output[i]["final_start"],
+                    "end":output[i]["final_end"],
                     "display": 'background',
                     "eventColor":"blue",
                     "className": "fwd"
@@ -243,8 +243,8 @@ export default defineComponent({
             var resources_var: { id: string; title: string }[] = [];
             for (var i = 0; i < output.length; ++i) {
                 var temp_res = {
-                    "id":output[i]["jobID"],
-                    "title":output[i]["jobID"]
+                    "id":output[i]["job"],
+                    "title":output[i]["job"]
                 };
                 resources_var.push(temp_res);
             }
