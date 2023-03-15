@@ -22,6 +22,9 @@ scripts_dir_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 sys.path.append(scripts_dir_path)
 from genetic_algorithm import MyProblem, main_algorithm
 from simpy_simulation import main
+import signal
+import psutil
+import multiprocessing
 
 
 def format_duration(duration):
@@ -71,12 +74,40 @@ def baseline(self, sorting_tech):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
+pid = []
+
+def delete_all_elements(my_list):
+    for i in range(len(my_list) - 1, -1, -1):
+        del my_list[i]
+    return my_list
+
+def run_genetic_optimizer_in_diff_process(self, request, input_jobs):
+    output = main_algorithm(input_jobs=input_jobs)
+    jobs_data = output[2]
+    for job_data in jobs_data:
+        job_data['job'] = str(job_data['job'])
+        job_data['final_start'] = datetime.strptime(job_data['final_start'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        job_data['final_end'] = datetime.strptime(job_data['final_end'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        job_data['start'] = datetime.strptime(job_data['start'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        job_data['end'] = datetime.strptime(job_data['end'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        job_data['duration_machine'] = format_duration(job_data['duration_machine'])
+        job_data['duration_manual'] = format_duration(job_data['duration_manual'])
+        job_data['setuptime_material'] = format_duration(job_data['setuptime_material'])
+        job_data['setuptime_coil'] = format_duration(job_data['setuptime_coil'])
+        job_data['setup_time'] = format_duration(job_data['setup_time'])
+        new_dict = {k: v for k, v in job_data.items() if k not in ('jobStartDelay', 'jobEndDelay', 'start', 'end') and v}
+        job_instance = Job.objects.get(job=job_data['job'])
+        serializer = self.get_serializer(job_instance, data=new_dict, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+    
 class JobsViewSet(ModelViewSet):
     queryset = Job.objects.all()
     detailsset = Detail.objects.all()
     serializer_class = JobsSerializer
     details_serializer_class = DetailsSerializer
     lookup_field = 'job'
+    pid = None
 
     # updates a single job, put call
     def update(self, request, *args, **kwargs):
@@ -123,28 +154,17 @@ class JobsViewSet(ModelViewSet):
     # runs genetic optimizer
     @action(detail=False, methods=['post'])
     def run_genetic_optimizer(self, request):
+        current_process = psutil.Process()
+        self.pid = current_process.pid
         schedule = Job.objects.all()
         serializer = JobsSerializer(schedule, many=True)
         input_jobs = serializer.data
-        output = main_algorithm(input_jobs=input_jobs)
-        jobs_data = output[2]
-        for job_data in jobs_data:
-            job_data['job'] = str(job_data['job'])
-            job_data['final_start'] = datetime.strptime(job_data['final_start'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-            job_data['final_end'] = datetime.strptime(job_data['final_end'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-            job_data['start'] = datetime.strptime(job_data['start'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-            job_data['end'] = datetime.strptime(job_data['end'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-            job_data['duration_machine'] = format_duration(job_data['duration_machine'])
-            job_data['duration_manual'] = format_duration(job_data['duration_manual'])
-            job_data['setuptime_material'] = format_duration(job_data['setuptime_material'])
-            job_data['setuptime_coil'] = format_duration(job_data['setuptime_coil'])
-            job_data['setup_time'] = format_duration(job_data['setup_time'])
-            new_dict = {k: v for k, v in job_data.items() if k not in ('jobStartDelay', 'jobEndDelay', 'start', 'end') and v}
-            job_instance = Job.objects.get(job=job_data['job'])
-            serializer = self.get_serializer(job_instance, data=new_dict, partial=True)
-            serializer.is_valid(raise_exception=True)
-            self.perform_update(serializer)
-        return Response({'message': 'Genetic optimizer complete.'})
+        p = multiprocessing.Process(target=run_genetic_optimizer_in_diff_process, args=(self,request,input_jobs,))
+        p.start()
+        pid.append(p.pid)
+        p.join()
+        response = {'message': 'Genetic optimizer complete.'}
+        return Response(response)
 
     @action(detail=False, methods=['post'])
     def run_sjf(self, request):
@@ -169,7 +189,20 @@ class JobsViewSet(ModelViewSet):
     @action(detail=False, methods=['post'])
     def run_random(self, request):
         baseline(self, sorting_tech = "random")
-        return Response({'message': 'Release Scheduling completed.'})
+        return Response({'message': 'Release Date Scheduling completed.'})
+
+    @action(detail=False, methods=['post'])
+    def stop_genetic_optimizer(self, request):
+        try:
+            os.kill(pid[0], signal.SIGTERM)
+            delete_all_elements(pid)
+            return Response({'message': 'Stopping Genetic Optimizer completed.'})
+        except OSError:
+            pass
+        delete_all_elements(pid)
+        return Response({'message': 'Could not find running genetic optimizer.'})     
+
+
     # @action(methods=['put'], detail=True)
     # def update_entry(self, request, pk=None):
     #     instance = self.get_object()

@@ -11,6 +11,9 @@
         <v-btn class="flex-grow-1" @click="runReleaseFirst">Early Release</v-btn>
         <v-btn class="flex-grow-1" @click="runRandom">Random</v-btn>
       </v-col>
+      <v-col align="center">
+        <v-btn class="flex-grow-1" color="error" @click="stopProcess">Stop Process</v-btn>
+      </v-col>
     </v-row>
   </v-container>
 
@@ -184,7 +187,17 @@ export default {
         .catch((error) => {
           console.log(error);
         });
-    }
+    },
+    stopProcess() {
+      axios
+        .post("http://localhost:8000/api/jobs/stop_genetic_optimizer/")
+        .then((response) => {
+          console.log(response.data);
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
   },
 
 };
