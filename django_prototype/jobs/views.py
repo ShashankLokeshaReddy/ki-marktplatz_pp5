@@ -154,8 +154,6 @@ class JobsViewSet(ModelViewSet):
     # runs genetic optimizer
     @action(detail=False, methods=['post'])
     def run_genetic_optimizer(self, request):
-        current_process = psutil.Process()
-        self.pid = current_process.pid
         schedule = Job.objects.all()
         serializer = JobsSerializer(schedule, many=True)
         input_jobs = serializer.data
