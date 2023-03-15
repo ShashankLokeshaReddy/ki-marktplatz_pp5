@@ -100,19 +100,32 @@ export default defineComponent({
                 });
             },
             eventDrop: (info) => {
+                // Get the selected machine
                 var resources = info.event.getResources();
-                const jobs_data = [{"job": info.event.title, "final_start": info.event.start, "final_end": info.event.end, "selected_machine": resources[0]["title"]}];
+                var selectedMachine = resources[0]["title"];
+                
+                var machines = info.event.extendedProps.machines;
+                var allowedMachines = machines.split(',');
+                
+                // Check whether the selected machine is allowed
+                if (allowedMachines.includes(selectedMachine)) {
+                    // If the selected machine is allowed, update the job schedule
+                    const jobs_data = [{"job": info.event.title, "final_start": info.event.start, "final_end": info.event.end, "selected_machine": selectedMachine}];
 
-                axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
-                .then(response => {
-                    // Handle successful response
-                    console.log(response.data)
-                })
-                .catch(error => {
-                    // Handle error
-                    console.log(error)
-                });
-            },          
+                    axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
+                    .then(response => {
+                        // Handle successful response
+                        console.log(response.data)
+                    })
+                    .catch(error => {
+                        // Handle error
+                        console.log(error)
+                    });
+                } else {
+                    // If the selected machine is not allowed, revert the event to its original position
+                    info.revert();
+                }
+            },
             mounted() {
                 this.$nextTick(() => {
                     let calendar = this.$refs.machinecalendar.getApi();
@@ -128,7 +141,7 @@ export default defineComponent({
             var response = await fetch('http://localhost:8000/api/jobs/getSchedule')
             var output_resp = await response.json()
             var status = output_resp["Status"]
-            var output : { selected_machine: string; job: string; item: string; start: Date, end: Date, final_start: Date, final_end: Date }[] = [];
+            var output : { selected_machine: string; machines: string; job: string; item: string; start: Date, end: Date, final_start: Date, final_end: Date }[] = [];
             output = output_resp["Table"]
             
             var events_var = []
@@ -143,7 +156,10 @@ export default defineComponent({
                     "end":output[i]["final_end"],
                     "eventColor":"blue",
                     "display":'auto',
-                    "className": "fwd"
+                    "className": "fwd",
+                    "extendedProps": {
+                        "machines": output[i]["machines"]
+                    }
                 };
 
                 if (temp_event["resourceId"] === "SL 2")
