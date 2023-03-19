@@ -136,72 +136,51 @@ export default defineComponent({
                 let gmtTime_view_start = new Date(view_start.getTime() + offset_start * 60 * 1000);
                 let offset_end = view_end.getTimezoneOffset();
                 let gmtTime_view_end = new Date(view_end.getTime() + offset_end * 60 * 1000);
-                var resources = info.event.getResources();
-                var all_events = resources[0].getEvents()
-                var bck_event
-                for (let i = 0; i < all_events.length; i++) {
-                    if (all_events[i].classNames[0] === "bck"){ //info.event.title
-                        bck_event = all_events[i]
-                    }
-                }
-                if(info.event.classNames[0] === "fwd"){
-                    var override_start = info.event.start;
-                    var override_end = info.event.end;
-                    if(info.event.end > gmtTime_view_end){
-                        override_end = gmtTime_view_end;
-                    }
-                    if(info.event.start < gmtTime_view_start){
-                        override_start = gmtTime_view_start;
-                    }
-                }
-                if(info.event.end > bck_event.end){
-                    var numerator = bck_event.end - override_start;
-                    var denominator = override_end - override_start;
-                    var delta = numerator*100/denominator;
-                    info.el.style.background = `linear-gradient(90deg, blue ${delta}%, red 0%)`;
-                }
-                else{
-                    info.el.style.background = `blue`;
-                }
-                const duration_machine = info.event.end - info.event.start
-                const jobs_data = [{"job": bck_event.title, "duration_machine":duration_machine, "final_start": info.event.start, "final_end": info.event.end}];
 
-                axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
-                .then(response => {
-                    // Handle successful response
-                    console.log(response.data)
-                })
-                .catch(error => {
-                    // Handle error
-                    console.log(error)
-                });
-            },
-            eventDrop: (info) => {
-                let calendar: any = this.$refs.prodcalendar.getApi();
-                let view_start = calendar.currentData.calendarApi.currentData.dateProfile.activeRange.start;
-                let view_end = calendar.currentData.calendarApi.currentData.dateProfile.activeRange.end;
-                let offset_start = view_start.getTimezoneOffset();
-                let gmtTime_view_start = new Date(view_start.getTime() + offset_start * 60 * 1000);
-                let offset_end = view_end.getTimezoneOffset();
-                let gmtTime_view_end = new Date(view_end.getTime() + offset_end * 60 * 1000);
                 var resources = info.event.getResources();
-                var all_events = resources[0].getEvents()
-                var bck_event
+                var all_events = resources[0].getEvents();
+
+                // Get all events with the same title, but exclude the current event
+                const res = calendar.getResources();
+                const all_events_in_calandar = res.flatMap(resource => resource.getEvents())
+                const overlapping_events = all_events_in_calandar.filter(event => {
+                    return (event.title === info.event.title && event !== info.event);
+                });
+
+                // Check for overlapping events across different resources
+                const eventStart = info.event.start;
+                const eventEnd = info.event.end;
+                for (const overlappingEvent of overlapping_events) {
+                    const resourceIds = info.event.getResources().map(resource => resource.id);
+                    const overlappingResourceIds = overlappingEvent.getResources().map(resource => resource.id);
+                    const resourceOverlap = resourceIds.some(id => overlappingResourceIds.includes(id));
+                    if (!resourceOverlap) {
+                    if (eventEnd > overlappingEvent.start && eventStart < overlappingEvent.end) {
+                        // If there is an overlapping event, revert the change and show an error message
+                        info.revert();
+                        alert('Cannot drop event because it overlaps with another event with the same title.');
+                        return;
+                    }
+                    }
+                }
+
+                var bck_event;
                 for (let i = 0; i < all_events.length; i++) {
-                    if (all_events[i].classNames[0] === "bck"){ //info.event.title
-                        bck_event = all_events[i]
+                    if (all_events[i].classNames[0] === "bck"){
+                    bck_event = all_events[i]
                     }
                 }
                 if(info.event.classNames[0] === "fwd"){
                     var override_start = info.event.start;
                     var override_end = info.event.end;
                     if(info.event.end > gmtTime_view_end){
-                        override_end = gmtTime_view_end;
+                    override_end = gmtTime_view_end;
                     }
                     if(info.event.start < gmtTime_view_start){
-                        override_start = gmtTime_view_start;
+                    override_start = gmtTime_view_start;
                     }
                 }
+
                 if(info.event.end > bck_event.end){
                     var numerator = bck_event.end - override_start;
                     var denominator = override_end - override_start;
@@ -223,7 +202,83 @@ export default defineComponent({
                     // Handle error
                     console.log(error)
                 });
-            },          
+            },
+            eventDrop: (info) => {
+                let calendar: any = this.$refs.prodcalendar.getApi();
+                let view_start = calendar.currentData.calendarApi.currentData.dateProfile.activeRange.start;
+                let view_end = calendar.currentData.calendarApi.currentData.dateProfile.activeRange.end;
+                let offset_start = view_start.getTimezoneOffset();
+                let gmtTime_view_start = new Date(view_start.getTime() + offset_start * 60 * 1000);
+                let offset_end = view_end.getTimezoneOffset();
+                let gmtTime_view_end = new Date(view_end.getTime() + offset_end * 60 * 1000);
+
+                var resources = info.event.getResources();
+                var all_events = resources[0].getEvents();
+                
+                // Get all events with the same title, but exclude the current event
+                const res = calendar.getResources();
+                const all_events_in_calandar = res.flatMap(resource => resource.getEvents())
+                const overlapping_events = all_events_in_calandar.filter(event => {
+                    return (event.title === info.event.title && event !== info.event);
+                });
+
+                // Check for overlapping events across different resources
+                const eventStart = info.event.start;
+                const eventEnd = info.event.end;
+                for (const overlappingEvent of overlapping_events) {
+                    const resourceIds = info.event.getResources().map(resource => resource.id);
+                    const overlappingResourceIds = overlappingEvent.getResources().map(resource => resource.id);
+                    const resourceOverlap = resourceIds.some(id => overlappingResourceIds.includes(id));
+                    if (!resourceOverlap) {
+                    if (eventEnd > overlappingEvent.start && eventStart < overlappingEvent.end) {
+                        // If there is an overlapping event, revert the change and show an error message
+                        info.revert();
+                        alert('Cannot drop event because it overlaps with another event with the same title.');
+                        return;
+                    }
+                    }
+                }
+
+                var bck_event;
+                for (let i = 0; i < all_events.length; i++) {
+                    if (all_events[i].classNames[0] === "bck"){
+                    bck_event = all_events[i]
+                    }
+                }
+                if(info.event.classNames[0] === "fwd"){
+                    var override_start = info.event.start;
+                    var override_end = info.event.end;
+                    if(info.event.end > gmtTime_view_end){
+                    override_end = gmtTime_view_end;
+                    }
+                    if(info.event.start < gmtTime_view_start){
+                    override_start = gmtTime_view_start;
+                    }
+                }
+
+                if(info.event.end > bck_event.end){
+                    var numerator = bck_event.end - override_start;
+                    var denominator = override_end - override_start;
+                    var delta = numerator*100/denominator;
+                    info.el.style.background = `linear-gradient(90deg, blue ${delta}%, red 0%)`;
+                }
+                else{
+                    info.el.style.background = `blue`;
+                }
+
+                const jobs_data = [{"job": bck_event.title, "final_start": info.event.start, "final_end": info.event.end}];
+
+                axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
+                .then(response => {
+                    // Handle successful response
+                    console.log("sghdghghds.............",jobs_data)
+                    console.log(response.data)
+                })
+                .catch(error => {
+                    // Handle error
+                    console.log(error)
+                });
+            },       
             mounted() {
                 this.$nextTick(() => {
                     let calendar = this.$refs.prodcalendar.getApi();

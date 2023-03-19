@@ -124,6 +124,7 @@ export default defineComponent({
                 } else {
                     // If the selected machine is not allowed, revert the event to its original position
                     info.revert();
+                    alert('Cannot drop event as it has constraints to run on following machines: ' + info.event.extendedProps.machines);
                 }
             },
             mounted() {

@@ -1,17 +1,15 @@
 <template>
   <v-container>
     <v-row align="center">
-      <v-col align="center">
-        <v-btn class="flex-grow-1" @click="runGeneticOptimizer">Genetic Optimizer</v-btn>
-      </v-col>
-      <v-col align="center">
+      <v-col align="left">
         <v-btn class="flex-grow-1" @click="runSJF">SJF</v-btn>
         <v-btn class="flex-grow-1" @click="runLJF">LJF</v-btn>
         <v-btn class="flex-grow-1" @click="runDeadlineFirst">Early Deadline</v-btn>
         <v-btn class="flex-grow-1" @click="runReleaseFirst">Early Release</v-btn>
         <v-btn class="flex-grow-1" @click="runRandom">Random</v-btn>
       </v-col>
-      <v-col align="center">
+      <v-col align="right">
+        <v-btn class="flex-grow-1" @click="runGeneticOptimizer">Genetic Optimizer</v-btn>
         <v-btn class="flex-grow-1" color="error" @click="stopProcess">Stop Process</v-btn>
       </v-col>
     </v-row>
