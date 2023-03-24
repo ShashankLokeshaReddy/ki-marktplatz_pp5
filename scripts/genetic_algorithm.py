@@ -45,7 +45,7 @@ class MyProblem(ElementwiseProblem):
         out["F"] = [f1, f2]
 
 
-def main_algorithm(gen_amount = 5, input_jobs = None):
+def main_algorithm(gen_amount = 50, input_jobs = None):
     
     print("Start")
     
@@ -58,7 +58,7 @@ def main_algorithm(gen_amount = 5, input_jobs = None):
 
     problem = MyProblem(input_jobs=input_jobs, n_var=amount_of_var)
     algorithm = NSGA2(
-                        pop_size=1,
+                        pop_size=50,
                         pop=id_init,
                         mutation=InversionMutation(),
                         #crossover=SBX(prob=0.9, eta=15),

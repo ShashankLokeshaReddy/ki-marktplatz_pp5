@@ -1,16 +1,21 @@
 <template>
   <v-container>
     <v-row align="center">
-      <v-col align="left">
-        <v-btn class="flex-grow-1" @click="runSJF">SJF</v-btn>
-        <v-btn class="flex-grow-1" @click="runLJF">LJF</v-btn>
-        <v-btn class="flex-grow-1" @click="runDeadlineFirst">Early Deadline</v-btn>
-        <v-btn class="flex-grow-1" @click="runReleaseFirst">Early Release</v-btn>
-        <v-btn class="flex-grow-1" @click="runRandom">Random</v-btn>
+      <v-col align="center" class="mb-4">
+        <v-btn class="bordered flex-grow-1 mr-2" @click="runSJF">SJF</v-btn>
+        <v-btn class="bordered flex-grow-1 mr-2" @click="runLJF">LJF</v-btn>
+        <v-btn class="bordered flex-grow-1 mr-2" @click="runDeadlineFirst">Early Deadline</v-btn>
+        <v-btn class="bordered flex-grow-1 mr-2" @click="runReleaseFirst">Early Release</v-btn>
+        <v-btn class="bordered flex-grow-1" @click="runRandom">Random</v-btn>
       </v-col>
-      <v-col align="right">
-        <v-btn class="flex-grow-1" @click="runGeneticOptimizer">Genetic Optimizer</v-btn>
-        <v-btn class="flex-grow-1" color="error" @click="stopProcess">Stop Process</v-btn>
+      <v-col align="center" class="mb-4">
+        <v-btn class="bordered flex-grow-1 mr-2" @click="runGeneticOptimizer">Genetic Optimizer</v-btn>
+        <v-btn class="bordered flex-grow-1 mr-2" color="error" @click="stopProcess">Stop Process</v-btn>
+      </v-col>
+      <v-col align="center" class="mb-4">
+        <input type="file" ref="fileInput" @change="handleFileUpload"/>
+        <v-btn class="bordered" @click="upload">Upload Job Orders</v-btn>
+        <v-btn class="bordered" color="error" @click="deleteJobs">Delete Job Orders</v-btn>
       </v-col>
     </v-row>
   </v-container>
@@ -57,39 +62,42 @@ export default {
   },
 
   beforeMount() {
-    this.columnDefs = [
-      { headerName: "Maschine", field: "selected_machine", type: 'rightAligned', filter: true },
-      { headerName: "Job", field: "job", type: 'rightAligned', filter:true},
-      { headerName: "Part ID", field: "item", type: 'rightAligned', filter:true },
-      { headerName: "Startzeit", field: "start", type: 'rightAligned', filter:true },
-      { headerName: "Endzeit", field: "end", type: 'rightAligned', filter:true },
-      { headerName: "Production Start", field: "final_start", type: 'rightAligned', filter:true },
-      { headerName: "Production End", field: "final_end", type: 'rightAligned', filter:true },
-      { headerName: "Tube Type", field: "tube_type", type: 'rightAligned', filter:true },
-      { headerName: "Machines", field: "machines", type: 'rightAligned', filter:true },
-      { headerName: "Calculated Setup Time", field: "calculated_setup_time", type: 'rightAligned', filter:true },
-      { headerName: "Tool", field: "tool", type: 'rightAligned', filter:true },
-      { headerName: "Setup Time (Material)", field: "setuptime_material", type: 'rightAligned', filter:true },
-      { headerName: "Setup Time (Coil)", field: "setuptime_coil", type: 'rightAligned', filter:true },
-      { headerName: "Machine Duration", field: "duration_machine", type: 'rightAligned', filter:true },
-      { headerName: "Manual Duration", field: "duration_manual", type: 'rightAligned', filter:true },
-      { headerName: "Shift", field: "shift", type: 'rightAligned', filter:true },
-      { headerName: "Latest Start", field: "latest_start", type: 'rightAligned', filter:true },
-      { headerName: "Calculated Start", field: "calculated_start", type: 'rightAligned', filter:true },
-      { headerName: "Calculated End", field: "calculated_end", type: 'rightAligned', filter:true },
-      { headerName: "Planned Start", field: "planned_start", type: 'rightAligned', filter:true },
-      { headerName: "Planned End", field: "planned_end", type: 'rightAligned', filter:true },
-      { headerName: "Setup Time", field: "setup_time", type: 'rightAligned', filter:true },
-      { headerName: "Status", field: "status", type: 'rightAligned', filter:true }
-    ];
-
-    fetch("http://localhost:8000/api/jobs/getSchedule")
-      .then((res) => res.json())
-      .then((rowData) => (this.rowData = rowData["Table"]))
-      .catch((error) => console.log(error));
+    this.fillTable();
   },
 
   methods: {
+    fillTable() {
+      this.columnDefs = [
+        { headerName: "Maschine", field: "selected_machine", type: 'rightAligned', filter: true },
+        { headerName: "Job", field: "job", type: 'rightAligned', filter:true},
+        { headerName: "Part ID", field: "item", type: 'rightAligned', filter:true },
+        { headerName: "Startzeit", field: "start", type: 'rightAligned', filter:true },
+        { headerName: "Endzeit", field: "end", type: 'rightAligned', filter:true },
+        { headerName: "Production Start", field: "final_start", type: 'rightAligned', filter:true },
+        { headerName: "Production End", field: "final_end", type: 'rightAligned', filter:true },
+        { headerName: "Tube Type", field: "tube_type", type: 'rightAligned', filter:true },
+        { headerName: "Machines", field: "machines", type: 'rightAligned', filter:true },
+        { headerName: "Calculated Setup Time", field: "calculated_setup_time", type: 'rightAligned', filter:true },
+        { headerName: "Tool", field: "tool", type: 'rightAligned', filter:true },
+        { headerName: "Setup Time (Material)", field: "setuptime_material", type: 'rightAligned', filter:true },
+        { headerName: "Setup Time (Coil)", field: "setuptime_coil", type: 'rightAligned', filter:true },
+        { headerName: "Machine Duration", field: "duration_machine", type: 'rightAligned', filter:true },
+        { headerName: "Manual Duration", field: "duration_manual", type: 'rightAligned', filter:true },
+        { headerName: "Shift", field: "shift", type: 'rightAligned', filter:true },
+        { headerName: "Latest Start", field: "latest_start", type: 'rightAligned', filter:true },
+        { headerName: "Calculated Start", field: "calculated_start", type: 'rightAligned', filter:true },
+        { headerName: "Calculated End", field: "calculated_end", type: 'rightAligned', filter:true },
+        { headerName: "Planned Start", field: "planned_start", type: 'rightAligned', filter:true },
+        { headerName: "Planned End", field: "planned_end", type: 'rightAligned', filter:true },
+        { headerName: "Setup Time", field: "setup_time", type: 'rightAligned', filter:true },
+        { headerName: "Status", field: "status", type: 'rightAligned', filter:true }
+      ];
+
+      fetch("http://localhost:8000/api/jobs/getSchedule")
+        .then((res) => res.json())
+        .then((rowData) => (this.rowData = rowData["Table"]))
+        .catch((error) => console.log(error));
+    }
     runGeneticOptimizer() {
       const confirmed = window.confirm("Möchten Sie den genetischen Optimierer ausführen?");
       if (!confirmed) {
@@ -101,6 +109,7 @@ export default {
         .then((response) => {
           console.log(response.data);
           this.isLoading = false;
+          this.fillTable();
         })
         .catch((error) => {
           console.log(error);
@@ -117,6 +126,7 @@ export default {
         .then((response) => {
           console.log(response.data);
           this.isLoading = false;
+          this.fillTable();
         })
         .catch((error) => {
           console.log(error);
@@ -133,6 +143,7 @@ export default {
         .then((response) => {
           console.log(response.data);
           this.isLoading = false;
+          this.fillTable();
         })
         .catch((error) => {
           console.log(error);
@@ -149,6 +160,7 @@ export default {
         .then((response) => {
           console.log(response.data);
           this.isLoading = false;
+          this.fillTable();
         })
         .catch((error) => {
           console.log(error);
@@ -165,6 +177,7 @@ export default {
         .then((response) => {
           console.log(response.data);
           this.isLoading = false;
+          this.fillTable();
         })
         .catch((error) => {
           console.log(error);
@@ -181,6 +194,25 @@ export default {
         .then((response) => {
           console.log(response.data);
           this.isLoading = false;
+          this.fillTable();
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
+    deleteJobs() {
+      const confirmed = window.confirm("Would you like to delete all jobs?");
+      if (!confirmed) {
+        return;
+      }
+      this.isLoading = true; // show loading icon
+      axios
+        .post("http://localhost:8000/api/jobs/deleteJobs/")
+        .then((response) => {
+          console.log(response.data);
+          this.isLoading = false;
+          window.alert(response.data.message);
+          this.fillTable();
         })
         .catch((error) => {
           console.log(error);
@@ -191,12 +223,80 @@ export default {
         .post("http://localhost:8000/api/jobs/stop_genetic_optimizer/")
         .then((response) => {
           console.log(response.data);
+          this.fillTable();
         })
         .catch((error) => {
           console.log(error);
         });
     },
+    handleFileUpload(event) {
+      this.file = event.target.files[0];
+    },
+    upload() {
+      const formData = new FormData();
+      formData.append('file', this.file);
+      this.isLoading = true;
+      axios.post('http://localhost:8000/api/jobs/uploadCSV/', formData)
+        .then(response => {
+          console.log(response.data);
+          this.isLoading = false;
+          window.alert(response.data.message);
+          this.fillTable();
+        })
+        .catch(error => {
+          console.log(error);
+        });
+      },
+    },
   },
 
 };
 </script>
+
+<style>
+  button.v-btn {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 6px 12px; /* smaller padding */
+    font-size: 12px; /* smaller font size */
+    font-weight: 500;
+    text-transform: uppercase;
+    color: #333;
+    background-color: #fff;
+  }
+
+  button.v-btn:hover {
+    border-color: #999;
+    color: #666;
+    background-color: #f5f5f5;
+  }
+
+  button.v-btn:active,
+  button.v-btn:focus {
+    outline: none;
+    box-shadow: none;
+  }
+
+  label.v-btn {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 6px 12px; /* smaller padding */
+    font-size: 12px; /* smaller font size */
+    font-weight: 500;
+    text-transform: uppercase;
+    color: #333;
+    background-color: #fff;
+  }
+
+  label.v-btn:hover {
+    border-color: #999;
+    color: #666;
+    background-color: #f5f5f5;
+  }
+
+  label.v-btn:active,
+  label.v-btn:focus {
+    outline: none;
+    box-shadow: none;
+  }
+</style>

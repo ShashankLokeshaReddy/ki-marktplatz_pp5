@@ -1,6 +1,7 @@
 from rest_framework.viewsets import ModelViewSet
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
+from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -25,7 +26,12 @@ from simpy_simulation import main
 import signal
 import psutil
 import multiprocessing
-
+import csv
+from rest_framework.parsers import MultiPartParser
+from rest_framework.response import Response
+from rest_framework import status
+from django.utils.dateparse import parse_datetime
+from decimal import Decimal
 
 def format_duration(duration):
     duration_seconds = duration.total_seconds()
@@ -108,6 +114,7 @@ class JobsViewSet(ModelViewSet):
     details_serializer_class = DetailsSerializer
     lookup_field = 'job'
     pid = None
+    parser_classes = (MultiPartParser,)
 
     # updates a single job, put call
     def update(self, request, *args, **kwargs):
@@ -199,6 +206,59 @@ class JobsViewSet(ModelViewSet):
             pass
         delete_all_elements(pid)
         return Response({'message': 'Could not find running genetic optimizer.'})     
+
+    @action(detail=False, methods=['post'])
+    def uploadCSV(self, request):
+        csv_file = request.FILES.get('file')
+        if not csv_file:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        decoded_file = csv_file.read().decode('utf-8').splitlines()
+        reader = csv.DictReader(decoded_file)
+        jobs_data = list(reader)
+
+        for job_data in jobs_data:
+            job_instance = Job()
+            if 'start' in job_data:
+                job_data['order_release'] = job_data.pop('start')
+            if 'end' in job_data:
+                job_data['deadline'] = job_data.pop('end')
+            job_instance.job = job_data['job']
+            job_instance.item = job_data['item']
+            job_instance.tube_type = job_data['tube_type']
+            job_instance.selected_machine = job_data['selected_machine']
+            job_instance.machines = job_data['machines']
+            job_instance.calculated_setup_time = Decimal(job_data['calculated_setup_time']) if job_data['calculated_setup_time'] else None
+            job_instance.tool = job_data['tool']
+            job_instance.setuptime_material = job_data['setuptime_material']
+            job_instance.setuptime_coil = job_data['setuptime_coil']
+            job_instance.duration_machine = job_data['duration_machine']
+            job_instance.duration_manual = job_data['duration_manual']
+            job_instance.shift = job_data['shift']
+            job_instance.latest_start = parse_datetime(job_data['latest_start']) if job_data['latest_start'] else None
+            job_instance.calculated_start = parse_datetime(job_data['calculated_start']) if job_data['calculated_start'] else None
+            job_instance.calculated_end = parse_datetime(job_data['calculated_end']) if job_data['calculated_end'] else None
+            job_instance.planned_start = parse_datetime(job_data['planned_start']) if job_data['planned_start'] else None
+            job_instance.planned_end = parse_datetime(job_data['planned_end']) if job_data['planned_end'] else None
+            job_instance.final_start = parse_datetime(job_data['final_start']) if job_data['final_start'] else None
+            job_instance.final_end = parse_datetime(job_data['final_end']) if job_data['final_end'] else None
+            job_instance.setup_time = job_data['setup_time']
+            job_instance.status = job_data['status']
+            job_instance.jobStartDelay = Decimal(job_data['jobStartDelay']) if job_data['jobStartDelay'] else None
+            job_instance.jobEndDelay = Decimal(job_data['jobEndDelay']) if job_data['jobEndDelay'] else None
+            job_instance.order_release = parse_datetime(job_data['order_release']) if job_data['order_release'] else None
+            job_instance.deadline = parse_datetime(job_data['deadline']) if job_data['deadline'] else None
+            job_instance.save()
+
+        message = "Upload successful"
+        return Response({"message": message}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'])
+    def deleteJobs(self, request):
+        Job.objects.all().delete() # delete all objects in Job model
+        message = "All jobs were deleted successfully"
+        return Response({"message": message}, status=status.HTTP_200_OK)
+
 
 
     # @action(methods=['put'], detail=True)
