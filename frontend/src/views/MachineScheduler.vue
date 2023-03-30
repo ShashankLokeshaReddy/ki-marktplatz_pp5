@@ -49,25 +49,24 @@ export default defineComponent({
                     },
             customButtons: {
                 myCustomButton: {
-                text: 'speichern',
-                click: function() {
-                    alert('Der Plan wurde gespeichert!');
-                    var current_events: { selected_machine : string; title: string; start: Date; end: Date; }[]
-                    //current_events = this.getEvents(); //genau hier ist das Problem, dass es scheinbar keine Events bekommt.
-                    (async () => {
-                        const rawResponse = await fetch('https://httpbin.org/post', {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                                },
-                        //body: JSON.stringify(current_events)
-                                });
-                        const content = await rawResponse.json();
-
-                        console.log(content);
-                        })();
-                }
+                    text: 'speichern',
+                    click: function() {
+                        const confirmed = window.confirm("Would you like to save all jobs in a CSV?");
+                        if (!confirmed) {
+                            return;
+                        }
+                        axios
+                            .post("http://localhost:8000/api/jobs/savejobstoCSV/")
+                            .then((response) => {
+                            console.log(response.data);
+                            this.isLoading = false;
+                            window.alert(response.data.message);
+                            this.fillTable();
+                            })
+                            .catch((error) => {
+                            console.log(error);
+                            });
+                    }
                 }
             },
             weekends: true,
@@ -163,42 +162,6 @@ export default defineComponent({
                     }
                 };
 
-                if (temp_event["resourceId"] === "SL 2")
-                {
-                    temp_event["resourceId"] = "Maschine 1"
-                }
-                if (temp_event["resourceId"] === "SL 4")
-                {
-                    temp_event["resourceId"] = "Maschine 2"
-                }
-                if (temp_event["resourceId"] === "SL 5")
-                {
-                    temp_event["resourceId"] = "Maschine 3"
-                }
-                if (temp_event["resourceId"] === "SL 6")
-                {
-                    temp_event["resourceId"] = "Maschine 4"
-                }
-                if (temp_event["resourceId"] === "SL 7")
-                {
-                    temp_event["resourceId"] = "Maschine 5"
-                }
-                if (temp_event["resourceId"] === "SL 8")
-                {
-                    temp_event["resourceId"] = "Maschine 6"
-                }
-                if (temp_event["resourceId"] === "SL 9")
-                {
-                    temp_event["resourceId"] = "Maschine 7"
-                }
-                if (temp_event["resourceId"] === "SL 10")
-                {
-                    temp_event["resourceId"] = "Maschine 8"
-                }
-                if (temp_event["resourceId"] === "SL 11")
-                {
-                    temp_event["resourceId"] = "Maschine 9"
-                }
                 events_var.push(temp_event);
             }
 

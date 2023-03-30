@@ -11,6 +11,7 @@
       <v-col align="center" class="mb-4">
         <v-btn class="bordered flex-grow-1 mr-2" @click="runGeneticOptimizer">Genetic Optimizer</v-btn>
         <v-btn class="bordered flex-grow-1 mr-2" color="error" @click="stopProcess">Stop Process</v-btn>
+        <v-btn class="bordered flex-grow-1 mr-2" @click="saveJobs">Save Job Orders</v-btn>
       </v-col>
       <v-col align="center" class="mb-4">
         <input type="file" ref="fileInput" @change="handleFileUpload"/>
@@ -66,6 +67,24 @@ export default {
   },
 
   methods: {
+    saveJobs() {
+      const confirmed = window.confirm("Would you like to save all jobs in a CSV?");
+      if (!confirmed) {
+        return;
+      }
+      this.isLoading = true; // show loading icon
+      axios
+        .post("http://localhost:8000/api/jobs/savejobstoCSV/")
+        .then((response) => {
+          console.log(response.data);
+          this.isLoading = false;
+          window.alert(response.data.message);
+          this.fillTable();
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
     fillTable() {
       this.columnDefs = [
         { headerName: "Maschine", field: "selected_machine", type: 'rightAligned', filter: true },

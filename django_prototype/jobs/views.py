@@ -5,6 +5,7 @@ from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.http import HttpResponse
 
 from .models import Job
 from .serializer import JobsSerializer
@@ -259,6 +260,27 @@ class JobsViewSet(ModelViewSet):
         message = "All jobs were deleted successfully"
         return Response({"message": message}, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=['post'])
+    def savejobstoCSV(self, request):
+        jobs = Job.objects.all()
+
+        # Generate a unique filename based on the current timestamp
+        timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        filename = f"data/saved_schedules/jobs_{timestamp}.csv"
+
+        # Create a CSV writer object
+        with open(filename, mode='w') as csv_file:
+            writer = csv.writer(csv_file)
+
+            # Write the header row
+            writer.writerow(['job', 'item', 'order_release', 'tube_type', 'selected_machine', 'machines', 'calculated_setup_time', 'tool', 'setuptime_material', 'setuptime_coil', 'duration_machine', 'duration_manual', 'shift', 'deadline', 'latest_start', 'calculated_start', 'calculated_end', 'planned_start', 'planned_end', 'final_start', 'final_end', 'setup_time', 'status'])
+
+            # Write the data rows
+            for job in jobs:
+                writer.writerow([job.job, job.item, job.order_release, job.tube_type, job.selected_machine, job.machines, job.calculated_setup_time, job.tool, job.setuptime_material, job.setuptime_coil, job.duration_machine, job.duration_manual, job.shift, job.deadline, job.latest_start, job.calculated_start, job.calculated_end, job.planned_start, job.planned_end, job.final_start, job.final_end, job.setup_time, job.status])
+
+        message = "All jobs were saved successfully"
+        return Response({"message": message}, status=status.HTTP_200_OK)
 
 
     # @action(methods=['put'], detail=True)

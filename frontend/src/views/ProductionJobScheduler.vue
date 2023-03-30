@@ -47,25 +47,24 @@ export default defineComponent({
                     },
             customButtons: {
                 myCustomButton: {
-                text: 'speichern',
-                click: function() {
-                    alert('Der Plan wurde gespeichert!');
-                    var current_events: { selected_machine : string; title: string; start: Date; end: Date; }[]
-                    //current_events = this.getEvents(); //genau hier ist das Problem, dass es scheinbar keine Events bekommt.
-                    (async () => {
-                        const rawResponse = await fetch('https://httpbin.org/post', {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                                },
-                        //body: JSON.stringify(current_events)
-                                });
-                        const content = await rawResponse.json();
-
-                        console.log(content);
-                        })();
-                }
+                    text: 'speichern',
+                    click: function() {
+                        const confirmed = window.confirm("Would you like to save all jobs in a CSV?");
+                        if (!confirmed) {
+                            return;
+                        }
+                        axios
+                            .post("http://localhost:8000/api/jobs/savejobstoCSV/")
+                            .then((response) => {
+                            console.log(response.data);
+                            this.isLoading = false;
+                            window.alert(response.data.message);
+                            this.fillTable();
+                            })
+                            .catch((error) => {
+                            console.log(error);
+                            });
+                    }
                 }
             },
             weekends: true,
@@ -271,7 +270,6 @@ export default defineComponent({
                 axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
                 .then(response => {
                     // Handle successful response
-                    console.log("sghdghghds.............",jobs_data)
                     console.log(response.data)
                 })
                 .catch(error => {
@@ -321,42 +319,6 @@ export default defineComponent({
                     "className": "fwd"
                 };
 
-                if (temp_event["title"] === "SL 2")
-                {
-                    temp_event["title"] = "Maschine 1"
-                }
-                if (temp_event["title"] === "SL 4")
-                {
-                    temp_event["title"] = "Maschine 2"
-                }
-                if (temp_event["title"] === "SL 5")
-                {
-                    temp_event["title"] = "Maschine 3"
-                }
-                if (temp_event["title"] === "SL 6")
-                {
-                    temp_event["title"] = "Maschine 4"
-                }
-                if (temp_event["title"] === "SL 7")
-                {
-                    temp_event["title"] = "Maschine 5"
-                }
-                if (temp_event["title"] === "SL 8")
-                {
-                    temp_event["title"] = "Maschine 6"
-                }
-                if (temp_event["title"] === "SL 9")
-                {
-                    temp_event["title"] = "Maschine 7"
-                }
-                if (temp_event["title"] === "SL 10")
-                {
-                    temp_event["title"] = "Maschine 8"
-                }
-                if (temp_event["title"] === "SL 11")
-                {
-                    temp_event["title"] = "Maschine 9"
-                }
                 events_var.push(bck_event);
                 events_var.push(temp_event);
             }
