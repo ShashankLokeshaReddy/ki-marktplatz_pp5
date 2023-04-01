@@ -86,17 +86,40 @@ export default defineComponent({
                 info.el.style.color = "white";
             },
             eventResize: (info) => {
+                // Get the selected machine
                 var resources = info.event.getResources();
-                const jobs_data = [{"job": info.event.title, "final_start": info.event.start, "final_end": info.event.end, "selected_machine": resources[0]["title"]}];
-                axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
-                .then(response => {
-                    // Handle successful response
-                    console.log(response.data)
-                })
-                .catch(error => {
-                    // Handle error
-                    console.log(error)
-                });
+                var selectedMachine = resources[0]["title"];
+                
+                var machines = info.event.extendedProps.machines;
+                var allowedMachines = machines.split(',');
+                
+                // Check whether the selected machine is allowed
+                if (allowedMachines.includes(selectedMachine)) {
+                    const jobs_data = {
+                    job: info.event.title,
+                    final_start: info.event.start,
+                    final_end: info.event.end,
+                    selected_machine: selectedMachine
+                    };
+
+                    const formData = new FormData();
+                    for (let key in jobs_data) {
+                    formData.append(key, jobs_data[key]);
+                    }
+
+                    axios.post('http://localhost:8000/api/jobs/setInd/', formData)
+                    .then(response => {
+                        console.log(response.data);
+                    })
+                    .catch(error => {
+                        console.log(error);
+                    });
+                } 
+                else {
+                    // If the selected machine is not allowed, revert the event to its original position
+                    info.revert();
+                    alert('Cannot drop event as it has constraints to run on following machines: ' + info.event.extendedProps.machines);
+                }
             },
             eventDrop: (info) => {
                 // Get the selected machine
@@ -108,19 +131,27 @@ export default defineComponent({
                 
                 // Check whether the selected machine is allowed
                 if (allowedMachines.includes(selectedMachine)) {
-                    // If the selected machine is allowed, update the job schedule
-                    const jobs_data = [{"job": info.event.title, "final_start": info.event.start, "final_end": info.event.end, "selected_machine": selectedMachine}];
+                    const jobs_data = {
+                    job: info.event.title,
+                    final_start: info.event.start,
+                    final_end: info.event.end,
+                    selected_machine: selectedMachine
+                    };
+                    console.log("jobs_data at VUe:",jobs_data);
+                    const formData = new FormData();
+                    for (let key in jobs_data) {
+                    formData.append(key, jobs_data[key]);
+                    }
 
-                    axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
+                    axios.post('http://localhost:8000/api/jobs/setInd/', formData)
                     .then(response => {
-                        // Handle successful response
-                        console.log(response.data)
+                        console.log(response.data);
                     })
                     .catch(error => {
-                        // Handle error
-                        console.log(error)
+                        console.log(error);
                     });
-                } else {
+                } 
+                else {
                     // If the selected machine is not allowed, revert the event to its original position
                     info.revert();
                     alert('Cannot drop event as it has constraints to run on following machines: ' + info.event.extendedProps.machines);
@@ -138,54 +169,53 @@ export default defineComponent({
     },
 
    async created(){
-            var response = await fetch('http://localhost:8000/api/jobs/getSchedule')
-            var output_resp = await response.json()
-            var status = output_resp["Status"]
-            var output : { selected_machine: string; machines: string; job: string; item: string; start: Date, end: Date, final_start: Date, final_end: Date }[] = [];
-            output = output_resp["Table"]
-            
-            var events_var = []
-            for (var i = 0; i < output.length; ++i) {
-                if(output[i]["final_end"]===null){
-                    output[i]["final_end"] = output[i]["end"]
+        var response = await fetch('http://localhost:8000/api/jobs/getSchedule')
+        var output_resp = await response.json()
+        var status = output_resp["Status"]
+        var output : { selected_machine: string; machines: string; job: string; item: string; start: Date, end: Date, final_start: Date, final_end: Date }[] = [];
+        output = output_resp["Table"]
+        
+        var events_var = []
+        for (var i = 0; i < output.length; ++i) {
+            if(output[i]["final_end"]===null){
+                output[i]["final_end"] = output[i]["end"]
+            }
+            var temp_event = {
+                "resourceId":output[i]["selected_machine"],
+                "title":output[i]["job"],
+                "start":output[i]["final_start"],
+                "end":output[i]["final_end"],
+                "eventColor":"blue",
+                "display":'auto',
+                "className": "fwd",
+                "extendedProps": {
+                    "machines": output[i]["machines"]
                 }
-                var temp_event = {
-                    "resourceId":output[i]["selected_machine"],
-                    "title":output[i]["job"],
-                    "start":output[i]["final_start"],
-                    "end":output[i]["final_end"],
-                    "eventColor":"blue",
-                    "display":'auto',
-                    "className": "fwd",
-                    "extendedProps": {
-                        "machines": output[i]["machines"]
-                    }
-                };
-
-                events_var.push(temp_event);
-            }
-
-            var resources_var: { id: string; title: string }[] = [];
-            for (var i = 0; i < output.length; ++i) {
-                var temp_res = {
-                    "id":output[i]["selected_machine"],
-                    "title":output[i]["selected_machine"]
-                };
-                resources_var.push(temp_res);
-            }
-            /*output = [{
-               "selected_machine": "SL 2",
-                "title": "12403",
-                "start": new Date("2016-02-26T11:54:52Z"),
-                "end": new Date("2022-09-13T14:10:06Z")
-                    }]*/
-            var machinecount = resources_var.length
-            console.log(machinecount)
-            
-            this.calendarOptions["events"] = events_var
-            this.calendarOptions["resources"] = resources_var
-            console.log(this.calendarOptions["events"])
+            };
+            events_var.push(temp_event);
         }
+
+        var resources_var: { id: string; title: string }[] = [];
+        for (var i = 0; i < output.length; ++i) {
+            var temp_res = {
+                "id":output[i]["selected_machine"],
+                "title":output[i]["selected_machine"]
+            };
+            resources_var.push(temp_res);
+        }
+        /*output = [{
+            "selected_machine": "SL 2",
+            "title": "12403",
+            "start": new Date("2016-02-26T11:54:52Z"),
+            "end": new Date("2022-09-13T14:10:06Z")
+                }]*/
+        var machinecount = resources_var.length
+        console.log(machinecount)
+        
+        this.calendarOptions["events"] = events_var
+        this.calendarOptions["resources"] = resources_var
+        console.log(this.calendarOptions["events"])
+    }
 
 })
 

@@ -130,32 +130,38 @@ export default defineComponent({
                 let calendar: any = this.$refs.calendar.getApi();
                 let currentView = calendar.view;
                 calendar.changeView(currentView.type);
-                const jobs_data = [{"job": info.event.title, "start": info.event.start, "end": info.event.end}];
+                const jobs_data = {job: info.event.title, start: info.event.start, end: info.event.end}];
 
-                axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
+                const formData = new FormData();
+                for (let key in jobs_data) {
+                formData.append(key, jobs_data[key]);
+                }
+
+                axios.post('http://localhost:8000/api/jobs/setInd/', formData)
                 .then(response => {
-                    // Handle successful response
-                    console.log(response.data)
+                    console.log(response.data);
                 })
                 .catch(error => {
-                    // Handle error
-                    console.log(error)
+                    console.log(error);
                 });
             },
             eventDrop: (info) => {
                 let calendar: any = this.$refs.calendar.getApi();
                 let currentView = calendar.view;
                 calendar.changeView(currentView.type);
-                const jobs_data = [{"job": info.event.title, "start": info.event.start, "end": info.event.end}];
+                const jobs_data = {job: info.event.title, start: info.event.start, end: info.event.end};
 
-                axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
+                const formData = new FormData();
+                for (let key in jobs_data) {
+                formData.append(key, jobs_data[key]);
+                }
+
+                axios.post('http://localhost:8000/api/jobs/setInd/', formData)
                 .then(response => {
-                    // Handle successful response
-                    console.log(response.data)
+                    console.log(response.data);
                 })
                 .catch(error => {
-                    // Handle error
-                    console.log(error)
+                    console.log(error);
                 });
             },          
             mounted() {

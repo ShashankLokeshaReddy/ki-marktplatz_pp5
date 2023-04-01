@@ -10,6 +10,7 @@ from django.http import HttpResponse
 from .models import Job
 from .serializer import JobsSerializer
 import pandas as pd
+import re
 import os
 import sys
 from datetime import datetime, timedelta
@@ -33,6 +34,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils.dateparse import parse_datetime
 from decimal import Decimal
+from django.http import QueryDict
 
 def format_duration(duration):
     duration_seconds = duration.total_seconds()
@@ -44,6 +46,9 @@ def format_duration(duration):
 
 def baseline(self, sorting_tech):
     schedule = Job.objects.all()
+    # print("schedule baseline:")
+    # for job in schedule:
+    #     print(job.id, job.final_start)
     serializer = JobsSerializer(schedule, many=True)
     input_jobs = serializer.data
     df_init = pd.DataFrame(input_jobs)
@@ -79,7 +84,28 @@ def baseline(self, sorting_tech):
         job_instance = Job.objects.get(job=job_data['job'])
         serializer = self.get_serializer(job_instance, data=new_dict, partial=True)
         serializer.is_valid(raise_exception=True)
+        print("Baseline jobs_data:", job_data)
         self.perform_update(serializer)
+
+def format_ind_time(date_str):
+    # extract timezone offset from string
+    match = re.search(r'GMT([\+\-]\d{4})', date_str)
+    if not match:
+        raise ValueError('Invalid date string: no timezone offset found')
+    tz_offset_str = match.group(1)
+    # convert timezone offset string to datetime.timedelta object
+    tz_offset = timedelta(hours=int(tz_offset_str[1:3]), minutes=int(tz_offset_str[3:5]))
+    # remove timezone information from string
+    date_str = re.sub(r'GMT[\+\-]\d{4}\s+\(.+\)', '', date_str).strip()
+
+    # parse datetime string and add timezone offset
+    date_obj = datetime.strptime(date_str, '%a %b %d %Y %H:%M:%S')
+    date_obj -= tz_offset
+
+    # format datetime object as ISO 8601 string
+    final_date_str = date_obj.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    print(final_date_str)
+    return final_date_str
 
 pid = []
 
@@ -136,28 +162,55 @@ class JobsViewSet(ModelViewSet):
         json_obj = {'Status':detail_serializer.data[0]['status'],'Table':serializer.data}
         return JsonResponse(json_obj, safe=False, status=status.HTTP_200_OK)
 
-    # updates a batch of jobs
+    # updates a jobs
     @action(detail=False, methods=['post'])
-    def setSchedule(self, request):
-        jobs_data = request.data["jobs_data"] # assuming the request payload contains a list of jobs
-        for job_data in jobs_data:
-            try:
-                job_instance = Job.objects.get(job=job_data['job'])
-                final_start = datetime.strptime(job_data['final_start'], date_format)
-                final_end = datetime.strptime(job_data['final_end'], date_format)
-                duration = final_end - final_start
-                duration_days = duration.days
-                duration_hours, remainder = divmod(duration.seconds, 3600)
-                duration_minutes, duration_seconds = divmod(remainder, 60)
-                duration_machine = f"{duration_days} day{'s' if duration_days != 1 else ''}, {duration_hours:02d}:{duration_minutes:02d}:{duration_seconds:02d}"
-                job_data['duration_machine'] = duration_machine
-                serializer = self.get_serializer(job_instance, data=job_data, partial=True)
-                serializer.is_valid(raise_exception=True)
-                self.perform_update(serializer)
-            except:
-                # handle exception here
-                pass
-        return Response(status=status.HTTP_200_OK)
+    def setInd(self, request):
+        job_data = request.data.copy()
+        job_instance = Job.objects.get(job=job_data['job'])
+        if 'start' in job_data and 'end' in job_data:
+            job_data['start'] = format_ind_time(job_data['start'])
+            job_data['end'] = format_ind_time(job_data['end'])
+        if 'final_start' in job_data and 'final_end' in job_data:
+            job_data['final_start'] = format_ind_time(job_data['final_start'])
+            job_data['final_end'] = format_ind_time(job_data['final_end'])
+            final_start = datetime.strptime(job_data['final_start'], '%Y-%m-%dT%H:%M:%S.%fZ')
+            final_end = datetime.strptime(job_data['final_end'], '%Y-%m-%dT%H:%M:%S.%fZ')
+            duration = final_end - final_start
+            duration_days = duration.days
+            duration_hours, remainder = divmod(duration.seconds, 3600)
+            duration_minutes, duration_seconds = divmod(remainder, 60)
+            duration_machine = f"{duration_days} day{'s' if duration_days != 1 else ''}, {duration_hours:02d}:{duration_minutes:02d}:{duration_seconds:02d}"
+            job_data['duration_machine'] = duration_machine
+        print("Received data:", job_data)
+        serializer = self.get_serializer(job_instance, data=job_data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        message = "Individual job was saved successfully"
+        return Response({"message": message}, status=status.HTTP_200_OK)
+
+    # updates a batch of jobs
+    # @action(detail=False, methods=['post'])
+    # def setSchedule(self, request):
+    #     jobs_data = request.data["jobs_data"] # assuming the request payload contains a list of jobs
+    #     print("jobs_data",jobs_data)
+    #     for job_data in jobs_data:
+    #         try:
+    #             job_instance = Job.objects.get(job=job_data['job'])
+    #             final_start = datetime.strptime(job_data['final_start'], date_format)
+    #             final_end = datetime.strptime(job_data['final_end'], date_format)
+    #             duration = final_end - final_start
+    #             duration_days = duration.days
+    #             duration_hours, remainder = divmod(duration.seconds, 3600)
+    #             duration_minutes, duration_seconds = divmod(remainder, 60)
+    #             duration_machine = f"{duration_days} day{'s' if duration_days != 1 else ''}, {duration_hours:02d}:{duration_minutes:02d}:{duration_seconds:02d}"
+    #             job_data['duration_machine'] = duration_machine
+    #             serializer = self.get_serializer(job_instance, data=job_data, partial=True)
+    #             serializer.is_valid(raise_exception=True)
+    #             self.perform_update(serializer)
+    #         except:
+    #             # handle exception here
+    #             pass
+    #     return Response(status=status.HTTP_200_OK)
 
     # runs genetic optimizer
     @action(detail=False, methods=['post'])
@@ -281,7 +334,6 @@ class JobsViewSet(ModelViewSet):
 
         message = "All jobs were saved successfully"
         return Response({"message": message}, status=status.HTTP_200_OK)
-
 
     # @action(methods=['put'], detail=True)
     # def update_entry(self, request, pk=None):

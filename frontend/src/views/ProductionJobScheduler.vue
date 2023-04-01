@@ -138,7 +138,7 @@ export default defineComponent({
 
                 var resources = info.event.getResources();
                 var all_events = resources[0].getEvents();
-
+                
                 // Get all events with the same title, but exclude the current event
                 const res = calendar.getResources();
                 const all_events_in_calandar = res.flatMap(resource => resource.getEvents())
@@ -190,18 +190,20 @@ export default defineComponent({
                     info.el.style.background = `blue`;
                 }
 
-                const jobs_data = [{"job": bck_event.title, "final_start": info.event.start, "final_end": info.event.end}];
+                const jobs_data = {job: bck_event.title, final_start: info.event.start, final_end: info.event.end};
+                const formData = new FormData();
+                for (let key in jobs_data) {
+                formData.append(key, jobs_data[key]);
+                }
 
-                axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
+                axios.post('http://localhost:8000/api/jobs/setInd/', formData)
                 .then(response => {
-                    // Handle successful response
-                    console.log(response.data)
+                    console.log(response.data);
                 })
                 .catch(error => {
-                    // Handle error
-                    console.log(error)
+                    console.log(error);
                 });
-            },
+            },  
             eventDrop: (info) => {
                 let calendar: any = this.$refs.prodcalendar.getApi();
                 let view_start = calendar.currentData.calendarApi.currentData.dateProfile.activeRange.start;
@@ -265,16 +267,18 @@ export default defineComponent({
                     info.el.style.background = `blue`;
                 }
 
-                const jobs_data = [{"job": bck_event.title, "final_start": info.event.start, "final_end": info.event.end}];
+                const jobs_data = {job: bck_event.title, final_start: info.event.start, final_end: info.event.end};
+                const formData = new FormData();
+                for (let key in jobs_data) {
+                formData.append(key, jobs_data[key]);
+                }
 
-                axios.post('http://localhost:8000/api/jobs/setSchedule/', {jobs_data:jobs_data})
+                axios.post('http://localhost:8000/api/jobs/setInd/', formData)
                 .then(response => {
-                    // Handle successful response
-                    console.log(response.data)
+                    console.log(response.data);
                 })
                 .catch(error => {
-                    // Handle error
-                    console.log(error)
+                    console.log(error);
                 });
             },       
             mounted() {
