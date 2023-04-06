@@ -188,6 +188,30 @@ class JobsViewSet(ModelViewSet):
         message = "Individual job was saved successfully"
         return Response({"message": message}, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=['post'])
+    def setInd_Table(self, request):
+        job_data = request.data.copy()
+        job_instance = Job.objects.get(job=job_data['job'])
+        job_data['start'] = datetime.strptime(job_data['start'], '%Y-%m-%dT%H:%M:%SZ').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        job_data['end'] = datetime.strptime(job_data['end'], '%Y-%m-%dT%H:%M:%SZ').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        if 'final_start' in job_data and 'final_end' in job_data:
+            final_start = datetime.strptime(job_data['final_start'], '%Y-%m-%dT%H:%M:%SZ')
+            final_end = datetime.strptime(job_data['final_end'], '%Y-%m-%dT%H:%M:%SZ')
+            job_data['final_start'] = final_start.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+            job_data['final_end'] = final_end.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+            duration = final_end - final_start
+            duration_days = duration.days
+            duration_hours, remainder = divmod(duration.seconds, 3600)
+            duration_minutes, duration_seconds = divmod(remainder, 60)
+            duration_machine = f"{duration_days} day{'s' if duration_days != 1 else ''}, {duration_hours:02d}:{duration_minutes:02d}:{duration_seconds:02d}"
+            job_data['duration_machine'] = duration_machine
+        print("Received data:", job_data)
+        serializer = self.get_serializer(job_instance, data=job_data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        message = "Individual job was saved successfully"
+        return Response({"message": message}, status=status.HTTP_200_OK)
+
     # updates a batch of jobs
     # @action(detail=False, methods=['post'])
     # def setSchedule(self, request):

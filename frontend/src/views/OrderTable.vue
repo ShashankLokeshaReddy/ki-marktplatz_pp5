@@ -86,37 +86,75 @@ export default {
         });
     },
     fillTable() {
+      // Define saveButtonRenderer
+      const saveButtonRenderer = params => {
+        const button = document.createElement('button')
+        button.innerText = 'Save'
+        button.addEventListener('click', () => {
+          const rowData = params.node.data
+          const jobs_data = {
+            selected_machine: rowData.selected_machine,
+            job: rowData.job,
+            item: rowData.item,
+            start: rowData.start,
+            end: rowData.end,
+            final_start: rowData.final_start,
+            final_end: rowData.final_end,
+            tube_type: rowData.tube_type,
+            machines: rowData.machines,
+            tool: rowData.tool,
+            setuptime_material: rowData.setuptime_material,
+            setuptime_coil: rowData.setuptime_coil,
+            duration_machine: rowData.duration_machine,
+            shift: rowData.shift,
+            setup_time: rowData.setup_time,
+            status: rowData.status
+          };
+
+          const formData = new FormData();
+          for (let key in jobs_data) {
+          formData.append(key, jobs_data[key]);
+          }
+          
+          axios.post('http://localhost:8000/api/jobs/setInd_Table/', formData)
+          .then(response => {
+              console.log(response.data);
+          })
+          .catch(error => {
+              console.log(error);
+          });
+
+        })
+        return button
+      }
+
       this.columnDefs = [
-        { headerName: "Maschine", field: "selected_machine", type: 'rightAligned', filter: true },
-        { headerName: "Job", field: "job", type: 'rightAligned', filter:true},
-        { headerName: "Part ID", field: "item", type: 'rightAligned', filter:true },
-        { headerName: "Startzeit", field: "start", type: 'rightAligned', filter:true },
-        { headerName: "Endzeit", field: "end", type: 'rightAligned', filter:true },
-        { headerName: "Production Start", field: "final_start", type: 'rightAligned', filter:true },
-        { headerName: "Production End", field: "final_end", type: 'rightAligned', filter:true },
-        { headerName: "Tube Type", field: "tube_type", type: 'rightAligned', filter:true },
-        { headerName: "Machines", field: "machines", type: 'rightAligned', filter:true },
-        { headerName: "Calculated Setup Time", field: "calculated_setup_time", type: 'rightAligned', filter:true },
-        { headerName: "Tool", field: "tool", type: 'rightAligned', filter:true },
-        { headerName: "Setup Time (Material)", field: "setuptime_material", type: 'rightAligned', filter:true },
-        { headerName: "Setup Time (Coil)", field: "setuptime_coil", type: 'rightAligned', filter:true },
-        { headerName: "Machine Duration", field: "duration_machine", type: 'rightAligned', filter:true },
-        { headerName: "Manual Duration", field: "duration_manual", type: 'rightAligned', filter:true },
-        { headerName: "Shift", field: "shift", type: 'rightAligned', filter:true },
-        { headerName: "Latest Start", field: "latest_start", type: 'rightAligned', filter:true },
-        { headerName: "Calculated Start", field: "calculated_start", type: 'rightAligned', filter:true },
-        { headerName: "Calculated End", field: "calculated_end", type: 'rightAligned', filter:true },
-        { headerName: "Planned Start", field: "planned_start", type: 'rightAligned', filter:true },
-        { headerName: "Planned End", field: "planned_end", type: 'rightAligned', filter:true },
-        { headerName: "Setup Time", field: "setup_time", type: 'rightAligned', filter:true },
-        { headerName: "Status", field: "status", type: 'rightAligned', filter:true }
+        { headerName: "Job", field: "job", type: 'rightAligned', filter:true },
+        { headerName: "Maschine", field: "selected_machine", type: 'rightAligned', filter: true, editable: true },
+        { headerName: "Part ID", field: "item", type: 'rightAligned', filter:true, editable: true },
+        { headerName: "Startzeit", field: "start", type: 'rightAligned', filter:true, editable: true },
+        { headerName: "Endzeit", field: "end", type: 'rightAligned', filter:true, editable: true },
+        { headerName: "Production Start", field: "final_start", type: 'rightAligned', filter:true, editable: true },
+        { headerName: "Production End", field: "final_end", type: 'rightAligned', filter:true, editable: true },
+        { headerName: "Tube Type", field: "tube_type", type: 'rightAligned', filter:true, editable: true },
+        { headerName: "Machines", field: "machines", type: 'rightAligned', filter:true, editable: true },
+        { headerName: "Calculated Setup Time", field: "calculated_setup_time", type: 'rightAligned', filter:true, editable: true },
+        { headerName: "Tool", field: "tool", type: 'rightAligned', filter:true, editable: true },
+        { headerName: "Setup Time (Material)", field: "setuptime_material", type: 'rightAligned', filter:true, editable: true },
+        { headerName: "Setup Time (Coil)", field: "setuptime_coil", type: 'rightAligned', filter:true, editable: true },
+        { headerName: "Machine Duration", field: "duration_machine", type: 'rightAligned', filter:true, editable: true },
+        { headerName: "Manual Duration", field: "duration_manual", type: 'rightAligned', filter:true, editable: true },
+        { headerName: "Shift", field: "shift", type: 'rightAligned', filter:true, editable: true },
+        { headerName: "Setup Time", field: "setup_time", type: 'rightAligned', filter:true, editable: true },
+        { headerName: "Status", field: "status", type: 'rightAligned', filter:true, editable: true },
+        { headerName: "Action", cellRenderer: saveButtonRenderer}
       ];
 
       fetch("http://localhost:8000/api/jobs/getSchedule")
         .then((res) => res.json())
         .then((rowData) => (this.rowData = rowData["Table"]))
         .catch((error) => console.log(error));
-    }
+    },
     runGeneticOptimizer() {
       const confirmed = window.confirm("Möchten Sie den genetischen Optimierer ausführen?");
       if (!confirmed) {
