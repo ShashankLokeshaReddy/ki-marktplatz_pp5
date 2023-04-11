@@ -11,7 +11,7 @@ import csv
 import time
 import collections
 
-grouping = False
+logging = False
 max_machine_duration_flag = [False]
 max_machine_duration_default = 604800.0
 max_machine_duration = [max_machine_duration_default]
@@ -33,9 +33,23 @@ class Operator:
         self.env = env
         self.name = name
         self.operator = simpy.Resource(env, capacity=1)
+        self.occupancy = 0
     
-    def is_available(self, job):
+    def is_available(self):
         if self.operator.count == 0:
+            availability = True
+        else:
+            availability = False
+        return availability
+
+class Postprocessor:
+    def __init__(self, env, name):
+        self.env = env
+        self.name = name
+        self.postprocessor = simpy.Resource(env, capacity=1)
+    
+    def is_available(self):
+        if self.postprocessor.count == 0:
             availability = True
         else:
             availability = False
@@ -60,6 +74,7 @@ class MachineGroup:
         self.group_name = group_name
         self.machines = []
         self.operators = []
+        self.postprocessors = []
     
     def add_machine(self, machine):
         self.machines.append(machine)
@@ -67,57 +82,59 @@ class MachineGroup:
     def add_operator(self, operator):
         self.operators.append(operator)
 
-    def get_available_machines(self, machines):
-        available_machines = []
-        for machine in self.machines:
-            if machine.is_available():
-                if grouping:
-                    available_machines.append(machine)
-                else:
-                    if machine.name in machines:
-                        available_machines.append(machine)
-        return available_machines 
+    def add_postprocessor(self, postprocessor):
+        self.postprocessors.append(postprocessor)
 
-    def get_available_operators(self, operators):
-        available_operators = []
-        for operator in self.operators:
-            if operator.is_available():
-                if grouping:
-                    available_operators.append(operator)
-                else:
-                    if operator.name in operators:
-                        available_operators.append(operator)
-        return available_operators 
+class ManufacturingLayer:
+    def __init__(self):
+        self.machine_groups = []
+        self.env = None
+    
+    def add_machine_group(self, machine_group):
+        self.machine_groups.append(machine_group)
+    
+    def get_available_resources(self, machines):
+        available_resources = []
+        for machine_group in self.machine_groups:
+            for machine in machine_group.machines:
+                if machine.is_available():
+                    if machine.name in machines:
+                        for operator in machine_group.operators:
+                            if operator.is_available():
+                                for postprocessor in machine_group.postprocessors:
+                                    if postprocessor.is_available():
+                                        temp_dict = {"machine":machine, "operator":operator, "postprocessor":postprocessor}
+                                        available_resources.append(temp_dict)
+        return available_resources
 
     def run_job(self, job):
         release_time = string_to_timestamp(job["order_release"]) # "2021-09-01 00:00:00"
         earliest_prod_start_time = self.env.now
         current_time = datetime.fromtimestamp(self.env.now)
-        # print(current_time)
+        if logging:
+            print(current_time)
         diff_delay = max((release_time - current_time).total_seconds(),0)
         yield self.env.timeout(diff_delay)
-        if grouping:
-            available_machines = self.get_available_machines(self.machines)
-            duration_machine = job["duration_machine"] * 60 # minutes to seconds
-        else:
-            possible_machines = str(job["machines"]).split(",")
-            available_machines = self.get_available_machines(possible_machines)
-            duration_machine = job["duration_machine"].total_seconds()
+        possible_machines = str(job["machines"]).split(",")
+        available_resources = self.get_available_resources(possible_machines)
+        duration_machine = job["duration_machine"].total_seconds()
+        duration_manual = job["duration_manual"].total_seconds()
 
-        while not available_machines:
+        while not available_resources:
             yield self.env.timeout(60)
-            if grouping:
-                available_machines = [machine for machine in self.machines if machine.is_available()]
-            else:
-                available_machines = self.get_available_machines(possible_machines)
+            available_resources = self.get_available_resources(possible_machines)
 
-        chosen_machine = available_machines[0]#random.choice(available_machines)
+        chosen_resource = available_resources[0] # random.choice(available_resources)
+        chosen_machine = chosen_resource["machine"]
+        chosen_operator = chosen_resource["operator"]
+        chosen_postprocessor = chosen_resource["postprocessor"]
         if not chosen_machine.name in possible_machines:
             print("Wrong machine allocated")
             return
-        # print(current_time)
-        # print("max_machine_duration",(self.env.now + job["duration_machine"].total_seconds())/max_machine_duration_default, (earliest_prod_start_time + max_machine_duration[0])/max_machine_duration_default)
-        if not grouping and ((self.env.now + job["duration_machine"].total_seconds()) > (earliest_prod_start_time + max_machine_duration[0])):
+        if logging:
+            print(current_time)
+            print("max_machine_duration",(self.env.now + job["duration_machine"].total_seconds())/max_machine_duration_default, (earliest_prod_start_time + max_machine_duration[0])/max_machine_duration_default)
+        if ((self.env.now + job["duration_machine"].total_seconds()) > (earliest_prod_start_time + max_machine_duration[0])):
             if max_machine_duration[0] == max_machine_duration_default and not max_machine_duration_flag[0]:
                 print(self.env.now,"production duration exceeded for the job ", job["job"])
                 return
@@ -128,20 +145,38 @@ class MachineGroup:
                 delete_all_elements(max_machine_duration_flag)
                 max_machine_duration_flag.append(False)
 
+        # Check if operator occupany is above 90%
+        if chosen_operator.occupancy > 0.9:
+            yield self.env.timeout(duration_manual)
+
         machine_request = chosen_machine.machine.request()
         yield machine_request
+
+        # Increment operator occupancy upon requesting new machine
+        chosen_operator.occupancy = chosen_operator.occupancy + duration_manual/duration_machine
 
         start = self.env.now
         job["final_start"] = datetime.fromtimestamp(start).strftime("%Y-%m-%d %H:%M:%S")
         job["selected_machine"] = chosen_machine.name
-        # print(f"Job {job['job']} on Machine {job['selected_machine']} starts at {job['final_start']}")
+        if logging:
+            print(f"Job {job['job']} on Machine {job['selected_machine']} starts at {job['final_start']}")
          
         yield self.env.timeout(duration_machine)
         job["final_end"] = datetime.fromtimestamp(self.env.now).strftime("%Y-%m-%d %H:%M:%S")
         job["duration_machine"] = string_to_timestamp(job["final_end"]) - string_to_timestamp(job["final_start"])
 
-        # print(f"Job {job['job']} on Machine {job['selected_machine']} ends at {job['final_end']}")
+        if logging:
+            print(f"Job {job['job']} on Machine {job['selected_machine']} ends at {job['final_end']}")
         chosen_machine.machine.release(machine_request)
+
+        # Decrement operator occupancy upon requesting new machine
+        chosen_operator.occupancy = chosen_operator.occupancy - duration_manual/duration_machine
+
+        postprocessor_request = chosen_postprocessor.postprocessor.request()
+        yield postprocessor_request
+        # TODO: Is timeout needed here?
+        # yield self.env.timeout(duration_machine)
+        chosen_postprocessor.postprocessor.release(postprocessor_request)
 
         start_time_comp = string_to_timestamp(job["final_start"])
         end_time_comp = string_to_timestamp(job["final_end"])
@@ -176,34 +211,9 @@ class MachineGroup:
         scheduled_jobs.append(job)
         scheduled_jobs_in_cur_iter.append(job)
 
-    def schedule_job(self, sublist):
-        for job in sublist:
-            self.env.process(self.run_job(job))          
-
-class ManufacturingLayer:
-    def __init__(self):
-        self.machine_groups = []
-    
-    def add_machine_group(self, machine_group):
-        self.machine_groups.append(machine_group)
-    
     def schedule_job(self, joblist):
-        if grouping:
-            group_dict = {}
-            for job in joblist:
-                group = job['group']
-                if group in group_dict:
-                    group_dict[group].append(job)
-                else:
-                    group_dict[group] = [job]
-
-            for machine_group in self.machine_groups:
-                for group, sublist in group_dict.items():
-                    if machine_group.group_name == group:
-                        machine_group.schedule_job(sublist)
-        
-        else:
-            self.machine_groups[0].schedule_job(joblist)
+        for job in joblist:
+            self.env.process(self.run_job(job))   
 
 class ProductionPlant:
     def __init__(self):
@@ -235,9 +245,10 @@ def delete_all_elements(my_list):
 def get_desired_start(job_list):
     desired_start_date = None
     for job in job_list:
-        setup_time = job['setup_time']
+        setuptime_material = job["setuptime_material"]
+        setuptime_coil = job["setuptime_coil"]
         job_duration = job['duration_machine']
-        latest_start_time = job['deadline'] - job_duration #- setup_time
+        latest_start_time = job['deadline'] - job_duration - setuptime_material - setuptime_coil
         job['latest_start'] = latest_start_time
 
         if desired_start_date == None:
@@ -321,30 +332,51 @@ def main(ids, input_jobs):
             print(f"Desired start time for the batch of jobs: {datetime.fromtimestamp(desired_start_date)}")
 
             env = simpy.Environment(initial_time = desired_start_date)
-            m0 = Machine(env, "1531")
-            m1 = Machine(env, "1532")
-            m2 = Machine(env, "1533")
-            m3 = Machine(env, "1534")
-            m4 = Machine(env, "1535")
-            m5 = Machine(env, "1536")
-            m6 = Machine(env, "1537")
-            m7 = Machine(env, "1541")
-            m8 = Machine(env, "1542")
-            m9 = Machine(env, "1543")
+            m1531 = Machine(env, "1531")
+            m1532 = Machine(env, "1532")
+            m1533 = Machine(env, "1533")
+            m1534 = Machine(env, "1534")
+            m1535 = Machine(env, "1535")
+            m1536 = Machine(env, "1536")
+            m1537 = Machine(env, "1537")
+            m1541 = Machine(env, "1541")
+            m1542 = Machine(env, "1542")
+            m1543 = Machine(env, "1543")
+            operator1 = Operator(env, "operator1")
+            operator2 = Operator(env, "operator2")
+            operator3 = Operator(env, "operator3")
+            postprocessor1 = Postprocessor(env, "postprocessor1")
+            postprocessor2 = Postprocessor(env, "postprocessor2")
+            postprocessor3 = Postprocessor(env, "postprocessor3")
+            postprocessor4 = Postprocessor(env, "postprocessor4")
 
             mg1 = MachineGroup(env, "group1")
-            mg1.add_machine(m0)
-            mg1.add_machine(m1)
-            mg1.add_machine(m2)
-            mg1.add_machine(m3)
-            mg1.add_machine(m4)
-            mg1.add_machine(m5)
-            mg1.add_machine(m6)
-            mg1.add_machine(m7)
-            mg1.add_machine(m8)
-            mg1.add_machine(m9)
+            mg1.add_machine(m1537)
+            mg1.add_machine(m1536)
+            mg1.add_machine(m1535)
+            mg1.add_operator(operator1)
+            mg1.add_postprocessor(postprocessor1)
+
+            mg2 = MachineGroup(env, "group2")
+            mg2.add_machine(m1534)
+            mg2.add_machine(m1533)
+            mg2.add_machine(m1532)
+            mg2.add_operator(operator2)
+            mg2.add_postprocessor(postprocessor2)
+
+            mg3 = MachineGroup(env, "group3")
+            mg3.add_machine(m1531)
+            mg3.add_machine(m1541)
+            mg3.add_machine(m1542)
+            mg3.add_machine(m1543)
+            mg3.add_operator(operator3)
+            mg3.add_postprocessor(postprocessor3)
+            # mg3.add_postprocessor(postprocessor4)
 
             ml1.add_machine_group(mg1)
+            ml1.add_machine_group(mg2)
+            ml1.add_machine_group(mg3)
+            ml1.env = env
 
             manufacturing_layer.schedule_job(jobs_not_scheduled)
             env.run()
@@ -353,16 +385,6 @@ def main(ids, input_jobs):
             print("Makespan: ", makespan)
             if makespan != None:
                 makespans_cur_iter.append(makespan)
-
-            # Do this for the next manufacturing layer
-            if grouping:
-                for job in job_list:
-                    job["selected_machine"] = ""
-                    job["order_release"] = job["final_end"]
-                    job["final_start"] = ""
-                    job["final_end"] = ""
-                    job["jobStartDelay"] = ""
-                    job["jobEndDelay"] = ""
 
             delete_all_elements(scheduled_jobs_in_cur_iter)
             ml1.machine_groups = []
