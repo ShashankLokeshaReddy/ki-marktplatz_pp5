@@ -158,6 +158,8 @@ class JobsViewSet(ModelViewSet):
         schedule = Job.objects.all()
         serializer = JobsSerializer(schedule, many=True)
         detail_schedule = Detail.objects.all() # 0 empty, 1 unplanned, 2 heuristic, 3 optimized
+        if not detail_schedule.exists():
+            detail = Detail.objects.create(status=0)  # create a new Detail object with status=0
         detail_serializer = DetailsSerializer(detail_schedule, many=True)
         json_obj = {'Status':detail_serializer.data[0]['status'],'Table':serializer.data}
         return JsonResponse(json_obj, safe=False, status=status.HTTP_200_OK)
@@ -185,6 +187,12 @@ class JobsViewSet(ModelViewSet):
         serializer = self.get_serializer(job_instance, data=job_data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
+        detail_schedule = Detail.objects.all()
+        if detail_schedule.exists(): 
+            detail = detail_schedule[0] 
+            detail.status = 1  # unplanned
+            detail.save()
+
         message = "Individual job was saved successfully"
         return Response({"message": message}, status=status.HTTP_200_OK)
 
@@ -209,6 +217,11 @@ class JobsViewSet(ModelViewSet):
         serializer = self.get_serializer(job_instance, data=job_data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
+        detail_schedule = Detail.objects.all() # retrieve all Detail objects from the database
+        if detail_schedule.exists():  # check if there are any Detail objects in the database
+            detail = detail_schedule[0]  # get the first Detail object
+            detail.status = 1  # unplanned
+            detail.save()  # save the changes to the database
         message = "Individual job was saved successfully"
         return Response({"message": message}, status=status.HTTP_200_OK)
 
@@ -246,17 +259,32 @@ class JobsViewSet(ModelViewSet):
         p.start()
         pid.append(p.pid)
         p.join()
+        detail_schedule = Detail.objects.all()
+        if detail_schedule.exists():
+            detail = detail_schedule[0] 
+            detail.status = 3  # optimized
+            detail.save() 
         response = {'message': 'Genetic optimizer complete.'}
         return Response(response)
 
     @action(detail=False, methods=['post'])
     def run_sjf(self, request):
         baseline(self, sorting_tech = "SJF")
+        detail_schedule = Detail.objects.all()
+        if detail_schedule.exists(): 
+            detail = detail_schedule[0] 
+            detail.status = 2  # heuristic
+            detail.save() 
         return Response({'message': 'SJF completed.'})
 
     @action(detail=False, methods=['post'])
     def run_ljf(self, request):
         baseline(self, sorting_tech = "LJF")
+        detail_schedule = Detail.objects.all()
+        if detail_schedule.exists(): 
+            detail = detail_schedule[0] 
+            detail.status = 2  # heuristic
+            detail.save() 
         return Response({'message': 'LJF completed.'})
 
     @action(detail=False, methods=['post'])
@@ -267,11 +295,21 @@ class JobsViewSet(ModelViewSet):
     @action(detail=False, methods=['post'])
     def run_release_first(self, request):
         baseline(self, sorting_tech = "start")
+        detail_schedule = Detail.objects.all()
+        if detail_schedule.exists(): 
+            detail = detail_schedule[0] 
+            detail.status = 2  # heuristic
+            detail.save() 
         return Response({'message': 'Early Release Date First completed.'})
 
     @action(detail=False, methods=['post'])
     def run_random(self, request):
         baseline(self, sorting_tech = "random")
+        detail_schedule = Detail.objects.all()
+        if detail_schedule.exists(): 
+            detail = detail_schedule[0] 
+            detail.status = 2  # heuristic
+            detail.save() 
         return Response({'message': 'Release Date Scheduling completed.'})
 
     @action(detail=False, methods=['post'])
@@ -328,12 +366,22 @@ class JobsViewSet(ModelViewSet):
             job_instance.deadline = parse_datetime(job_data['deadline']) if job_data['deadline'] else None
             job_instance.save()
 
+        detail_schedule = Detail.objects.all() 
+        if detail_schedule.exists():
+            detail = detail_schedule[0] 
+            detail.status = 1  # unplanned
+            detail.save()
         message = "Upload successful"
         return Response({"message": message}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'])
     def deleteJobs(self, request):
-        Job.objects.all().delete() # delete all objects in Job model
+        Job.objects.all().delete()
+        detail_schedule = Detail.objects.all()
+        if detail_schedule.exists():
+            detail = detail_schedule[0]
+            detail.status = 0  # Empty
+            detail.save()  
         message = "All jobs were deleted successfully"
         return Response({"message": message}, status=status.HTTP_200_OK)
 
