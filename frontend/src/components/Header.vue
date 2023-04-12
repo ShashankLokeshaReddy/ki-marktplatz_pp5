@@ -2,13 +2,16 @@
   <v-container class="my-container">
     <v-row align="center">
       <v-col align="center">
+        <v-btn align="end" @click="hideToggle" to="/machineOccupation">Maschinenbesetzung</v-btn>
+      </v-col>
+      <v-col align="center">
         <v-btn-toggle mandatory tile color="primary" class="d-flex flex-row my-btn-toggle">
           <v-btn align="start" @click="showToggle" color="success" to="/">Gantt</v-btn>
           <v-btn align="end" @click="hideToggle" color="success" to="/table">Table</v-btn>
         </v-btn-toggle>
       </v-col>
       <v-col align="center">
-          <p>Optimization Status: {{ mappedStatus }}</p>
+          <p>Optimierungsstatus: {{ mappedStatus }}</p>
       </v-col>
     </v-row>
   </v-container>
@@ -45,7 +48,7 @@ export default {
       return "";
     },
   },
-  mounted() {
+  created() {
     this.fetchData();
   },
   methods: {
@@ -64,14 +67,23 @@ export default {
     hideToggle() {
       document.getElementById('my-toggle').hidden=true;
     },
-  },
-  watch: {
-    scheduleData: {
-      handler() {
-        this.fetchData();
-      },
-      deep: true,
+    handlePostRequest() {
+      // Make a GET request after a POST request is made
+      this.fetchData();
     },
+  },
+  mounted() {
+    // Listen for POST requests and call handlePostRequest()
+    axios.interceptors.response.use((response) => {
+      if (response.config.method === 'post') {
+        this.handlePostRequest();
+      }
+      return response;
+    });
+  },
+  beforeDestroy() {
+    // Remove the interceptor when the component is destroyed
+    axios.interceptors.response.eject(this.handlePostRequest);
   },
 };
 </script>

@@ -15,12 +15,9 @@ class Migration(migrations.Migration):
             name='Machine',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('resourceId', models.CharField(max_length=140, null=True)),
-                ('Start', models.DateTimeField(null=True)),
-                ('Ende', models.DateTimeField(null=True)),
-                ('KndNr', models.IntegerField(default=0)),
-                ('AKNR', models.IntegerField(default=0)),
-                ('SchrittNr', models.IntegerField(default=0)),
+                ('machineId', models.CharField(max_length=140, null=True)),
+                ('percentageOccupancy', models.CharField(max_length=140, null=True)),
+                ('maxDuration', models.CharField(max_length=140, null=True)),
             ],
         ),
     ]

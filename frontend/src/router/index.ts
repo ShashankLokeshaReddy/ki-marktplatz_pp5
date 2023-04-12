@@ -3,6 +3,7 @@ import MachineScheduler from "@/views/MachineScheduler.vue";
 import OrderTable from "@/views/OrderTable.vue";
 import ProductionJobScheduler from "@/views/ProductionJobScheduler.vue";
 import BackgroundJobScheduler from "@/views/BackgroundJobScheduler.vue";
+import MachineOccupation from "@/views/MachineOccupation.vue";
 
 const routes = [
   {
@@ -24,6 +25,11 @@ const routes = [
     path: "/background",
     name: "Background",
     component: BackgroundJobScheduler,
+  },
+  {
+    path: "/machineOccupation",
+    name: "MachineOccupation",
+    component: MachineOccupation,
   },
 ];
 

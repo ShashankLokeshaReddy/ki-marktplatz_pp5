@@ -20,6 +20,8 @@ parent_dir_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(parent_dir_path)
 from details.models import Detail
 from details.serializer import DetailsSerializer
+from machines.models import Machine
+from machines.serializer import MachinesSerializer
 
 scripts_dir_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..','scripts'))
 sys.path.append(scripts_dir_path)
@@ -160,6 +162,9 @@ class JobsViewSet(ModelViewSet):
         detail_schedule = Detail.objects.all() # 0 empty, 1 unplanned, 2 heuristic, 3 optimized
         if not detail_schedule.exists():
             detail = Detail.objects.create(status=0)  # create a new Detail object with status=0
+        machine_schedule = Machine.objects.all()
+        if not machine_schedule.exists():
+            print(serializer.data)
         detail_serializer = DetailsSerializer(detail_schedule, many=True)
         json_obj = {'Status':detail_serializer.data[0]['status'],'Table':serializer.data}
         return JsonResponse(json_obj, safe=False, status=status.HTTP_200_OK)
