@@ -265,4 +265,4 @@ order_df = order_df.sort_values(by="planned_start")
 order_df = order_df.reset_index(drop=True)
 
 # print results to console
-print(order_df[["job", "selected_machine", "planned_start", "planned_end"]])
+# print(order_df[["job", "selected_machine", "planned_start", "planned_end"]])

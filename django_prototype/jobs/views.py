@@ -26,7 +26,7 @@ from machines.serializer import MachinesSerializer
 scripts_dir_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..','scripts'))
 sys.path.append(scripts_dir_path)
 from genetic_algorithm import MyProblem, main_algorithm
-from simpy_simulation import main
+from simpy_simulation import simulate_and_schedule
 import signal
 import psutil
 import multiprocessing
@@ -37,6 +37,7 @@ from rest_framework import status
 from django.utils.dateparse import parse_datetime
 from decimal import Decimal
 from django.http import QueryDict
+from collections import defaultdict
 
 def format_duration(duration):
     duration_seconds = duration.total_seconds()
@@ -69,7 +70,7 @@ def baseline(self, sorting_tech):
     elif sorting_tech == "random":
         ids = df_init.sample(frac=1, random_state=42).index.to_list()
         
-    output = main(ids=ids, input_jobs=input_jobs)
+    output = simulate_and_schedule(ids=ids, input_jobs=input_jobs)
     jobs_data = output[2]
     for job_data in jobs_data:
         job_data['job'] = str(job_data['job'])
@@ -86,8 +87,15 @@ def baseline(self, sorting_tech):
         job_instance = Job.objects.get(job=job_data['job'])
         serializer = self.get_serializer(job_instance, data=new_dict, partial=True)
         serializer.is_valid(raise_exception=True)
-        print("Baseline jobs_data:", job_data)
+        # print("Baseline jobs_data:", job_data)
         self.perform_update(serializer)
+    
+    detail_schedule = Detail.objects.all()
+    if detail_schedule.exists(): 
+        detail = detail_schedule[0] 
+        detail.status = 2  # heuristic
+        detail.makespans = output[0]
+        detail.save() 
 
 def format_ind_time(date_str):
     # extract timezone offset from string
@@ -106,7 +114,7 @@ def format_ind_time(date_str):
 
     # format datetime object as ISO 8601 string
     final_date_str = date_obj.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-    print(final_date_str)
+    # print(final_date_str)
     return final_date_str
 
 pid = []
@@ -135,7 +143,44 @@ def run_genetic_optimizer_in_diff_process(self, request, input_jobs):
         serializer = self.get_serializer(job_instance, data=new_dict, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
-    
+    detail_schedule = Detail.objects.all()
+    if detail_schedule.exists():
+        detail = detail_schedule[0] 
+        detail.status = 3  # optimized
+        detail.makespans = output[1][0]
+        detail.save() 
+
+def calculate_machine_utilization(job_list):
+    machine_duration = defaultdict(int)
+    total_duration = defaultdict(int)
+
+    for job in job_list:
+        machine_list = job['machines'].split(',')
+        duration = job['duration_machine']
+        if duration is None:
+            continue
+        if 'day' in duration:
+            days, duration = duration.split(',')
+            days = int(days.split()[0])
+        else:
+            days = 0
+        hours, minutes, seconds = duration.split(':')
+        hours = int(hours)
+        minutes = int(minutes)
+        seconds = int(seconds)
+        total_seconds = (days * 24 * 60 * 60) + (hours * 60 * 60) + (minutes * 60) + seconds
+
+        for machine in machine_list:
+            machine_duration[machine] += total_seconds
+            total_duration[machine] += 24 * 60 * 60  # Total seconds in a day
+
+    machine_utilization = {}
+    for machine in machine_duration:
+        utilization = machine_duration[machine] / total_duration[machine]
+        machine_utilization[machine] = utilization
+
+    return machine_duration
+
 class JobsViewSet(ModelViewSet):
     queryset = Job.objects.all()
     detailsset = Detail.objects.all()
@@ -160,11 +205,13 @@ class JobsViewSet(ModelViewSet):
         schedule = Job.objects.all()
         serializer = JobsSerializer(schedule, many=True)
         detail_schedule = Detail.objects.all() # 0 empty, 1 unplanned, 2 heuristic, 3 optimized
-        if not detail_schedule.exists():
-            detail = Detail.objects.create(status=0)  # create a new Detail object with status=0
-        machine_schedule = Machine.objects.all()
-        if not machine_schedule.exists():
-            print(serializer.data)
+        # if not detail_schedule.exists():
+        #     detail = Detail.objects.create(status=0, makespans=None)  # create a new Detail object with status=0
+        # machine_schedule = Machine.objects.all()
+        # if not machine_schedule.exists():
+        #     unique_machines = calculate_machine_utilization(serializer.data)
+        #     print(unique_machines)
+        #     print("unique_machines")
         detail_serializer = DetailsSerializer(detail_schedule, many=True)
         json_obj = {'Status':detail_serializer.data[0]['status'],'Table':serializer.data}
         return JsonResponse(json_obj, safe=False, status=status.HTTP_200_OK)
@@ -188,7 +235,7 @@ class JobsViewSet(ModelViewSet):
             duration_minutes, duration_seconds = divmod(remainder, 60)
             duration_machine = f"{duration_days} day{'s' if duration_days != 1 else ''}, {duration_hours:02d}:{duration_minutes:02d}:{duration_seconds:02d}"
             job_data['duration_machine'] = duration_machine
-        print("Received data:", job_data)
+        # print("Received data:", job_data)
         serializer = self.get_serializer(job_instance, data=job_data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
@@ -196,6 +243,7 @@ class JobsViewSet(ModelViewSet):
         if detail_schedule.exists(): 
             detail = detail_schedule[0] 
             detail.status = 1  # unplanned
+            detail.makespans = None
             detail.save()
 
         message = "Individual job was saved successfully"
@@ -218,7 +266,7 @@ class JobsViewSet(ModelViewSet):
             duration_minutes, duration_seconds = divmod(remainder, 60)
             duration_machine = f"{duration_days} day{'s' if duration_days != 1 else ''}, {duration_hours:02d}:{duration_minutes:02d}:{duration_seconds:02d}"
             job_data['duration_machine'] = duration_machine
-        print("Received data:", job_data)
+        # print("Received data:", job_data)
         serializer = self.get_serializer(job_instance, data=job_data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
@@ -226,6 +274,7 @@ class JobsViewSet(ModelViewSet):
         if detail_schedule.exists():  # check if there are any Detail objects in the database
             detail = detail_schedule[0]  # get the first Detail object
             detail.status = 1  # unplanned
+            detail.makespans = None
             detail.save()  # save the changes to the database
         message = "Individual job was saved successfully"
         return Response({"message": message}, status=status.HTTP_200_OK)
@@ -264,32 +313,17 @@ class JobsViewSet(ModelViewSet):
         p.start()
         pid.append(p.pid)
         p.join()
-        detail_schedule = Detail.objects.all()
-        if detail_schedule.exists():
-            detail = detail_schedule[0] 
-            detail.status = 3  # optimized
-            detail.save() 
         response = {'message': 'Genetic optimizer complete.'}
         return Response(response)
 
     @action(detail=False, methods=['post'])
     def run_sjf(self, request):
         baseline(self, sorting_tech = "SJF")
-        detail_schedule = Detail.objects.all()
-        if detail_schedule.exists(): 
-            detail = detail_schedule[0] 
-            detail.status = 2  # heuristic
-            detail.save() 
         return Response({'message': 'SJF completed.'})
 
     @action(detail=False, methods=['post'])
     def run_ljf(self, request):
         baseline(self, sorting_tech = "LJF")
-        detail_schedule = Detail.objects.all()
-        if detail_schedule.exists(): 
-            detail = detail_schedule[0] 
-            detail.status = 2  # heuristic
-            detail.save() 
         return Response({'message': 'LJF completed.'})
 
     @action(detail=False, methods=['post'])
@@ -300,21 +334,11 @@ class JobsViewSet(ModelViewSet):
     @action(detail=False, methods=['post'])
     def run_release_first(self, request):
         baseline(self, sorting_tech = "start")
-        detail_schedule = Detail.objects.all()
-        if detail_schedule.exists(): 
-            detail = detail_schedule[0] 
-            detail.status = 2  # heuristic
-            detail.save() 
         return Response({'message': 'Early Release Date First completed.'})
 
     @action(detail=False, methods=['post'])
     def run_random(self, request):
         baseline(self, sorting_tech = "random")
-        detail_schedule = Detail.objects.all()
-        if detail_schedule.exists(): 
-            detail = detail_schedule[0] 
-            detail.status = 2  # heuristic
-            detail.save() 
         return Response({'message': 'Release Date Scheduling completed.'})
 
     @action(detail=False, methods=['post'])
@@ -375,6 +399,7 @@ class JobsViewSet(ModelViewSet):
         if detail_schedule.exists():
             detail = detail_schedule[0] 
             detail.status = 1  # unplanned
+            detail.makespans = None
             detail.save()
         message = "Upload successful"
         return Response({"message": message}, status=status.HTTP_200_OK)
@@ -386,6 +411,7 @@ class JobsViewSet(ModelViewSet):
         if detail_schedule.exists():
             detail = detail_schedule[0]
             detail.status = 0  # Empty
+            detail.makespans = None
             detail.save()  
         message = "All jobs were deleted successfully"
         return Response({"message": message}, status=status.HTTP_200_OK)

@@ -154,6 +154,9 @@ class ManufacturingLayer:
 
         # Increment operator occupancy upon requesting new machine
         chosen_operator.occupancy = chosen_operator.occupancy + duration_manual/duration_machine
+        # Mandatory setup times for every job
+        yield self.env.timeout(job["setuptime_material"].total_seconds())
+        yield self.env.timeout(job["setuptime_coil"].total_seconds())
 
         start = self.env.now
         job["final_start"] = datetime.fromtimestamp(start).strftime("%Y-%m-%d %H:%M:%S")
@@ -222,13 +225,15 @@ class ProductionPlant:
     def add_manufacturing_layer(self, manufacturing_layer):
         self.manufacturing_layers.append(manufacturing_layer)    
 
+# Makespan = End time of last job - (Start time of first job - Setup time)
 def get_makespan(job_list):
     min_start = None
     max_end = None
     for job in job_list:
         if not pd.isna(job["final_start"]):
             if not min_start or string_to_timestamp(job["final_start"]) < min_start:
-                min_start = string_to_timestamp(job["final_start"])
+                min_start = string_to_timestamp(job["final_start"]) - job["setuptime_material"] - job["setuptime_coil"]
+                print(min_start, string_to_timestamp(job["final_start"]), job["setuptime_material"], job["setuptime_coil"])
             if not max_end or string_to_timestamp(job["final_end"]) > max_end:
                 max_end = string_to_timestamp(job["final_end"])
     if min_start != None and max_end != None:
@@ -300,7 +305,7 @@ def convert_list_to_json(input_list):
         output_list.append(output_dict)
     return output_list
 
-def main(ids, input_jobs):
+def simulate_and_schedule(ids, input_jobs):
     if isinstance(input_jobs, list) and all(isinstance(job, collections.OrderedDict) for job in input_jobs):
         input_jobs = convert_list_to_json(input_jobs)
 
@@ -326,7 +331,7 @@ def main(ids, input_jobs):
                 desired_start_date = string_to_timestamp(desired_start_date).timestamp() - df['duration_machine'].max().total_seconds()
             if scheduled_jobs != []: # no buffer for the next batch jobs
                 end_max = final_end_max(scheduled_jobs)
-                print(desired_start_date, end_max)
+                # print(desired_start_date, end_max)
                 desired_start_date = max(string_to_timestamp(desired_start_date).timestamp(), end_max)
                 print(f"final_end_max time for the scheduled batch of jobs: {datetime.fromtimestamp(end_max)}")
             print(f"Desired start time for the batch of jobs: {datetime.fromtimestamp(desired_start_date)}")
@@ -388,21 +393,21 @@ def main(ids, input_jobs):
 
             delete_all_elements(scheduled_jobs_in_cur_iter)
             ml1.machine_groups = []
-            print(max_machine_duration)
+            # print(max_machine_duration)
             if max_machine_duration[0] < df['duration_machine'].max().total_seconds():
                 delete_all_elements(max_machine_duration)
                 max_machine_duration.append(df['duration_machine'].max().total_seconds())
 
         print("Deadline exceeded for these many jobs: ", len(deadlin_exceeded))
         print("Sum of deadline delays: ", sum(deadlin_exceeded))
-        print("Start delay for these many jobs: ", len(job_start_delays))
-        print("Sum of job start delays: ", sum(job_start_delays))
+        # print("Start delay for these many jobs: ", len(job_start_delays))
+        # print("Sum of job start delays: ", sum(job_start_delays))
+        makespans.append(str(makespans_cur_iter))
         total_job_start_delays.append(sum(job_start_delays))
         total_deadlin_exceeded.append(sum(deadlin_exceeded))
         delete_all_elements(job_start_delays)
         delete_all_elements(deadlin_exceeded)
         print("Total makespan: ", sum(makespans_cur_iter))
-        makespans.append(sum(makespans_cur_iter))
         delete_all_elements(scheduled_jobs)
         delete_all_elements(makespans_cur_iter)
 
@@ -453,5 +458,5 @@ if __name__ == "__main__":
 
     job_list = df_init.to_dict(orient='records')
 
-    makespans, total_deadlin_exceeded, job_list = main(ids=ids, input_jobs=job_list)
+    makespans, total_deadlin_exceeded, job_list = simulate_and_schedule(ids=ids, input_jobs=job_list)
     print(makespans, total_deadlin_exceeded)

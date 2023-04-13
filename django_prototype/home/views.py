@@ -15,7 +15,7 @@ def test_api(request):
     # request enthält irgendwie Datum
     selected_date = request.GET['date']
 
-    print(selected_date)
+    # print(selected_date)
     # template = loader.get_template('home/production_info_table.html')
     print('loading data')
     start = pd.to_datetime(selected_date, format='%Y-%m-%d')

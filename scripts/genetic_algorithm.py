@@ -4,7 +4,7 @@ import orders
 import numpy as np
 import matplotlib.pyplot as plt
 from genetic_helperfunctions import makespan, average_lateness
-from simpy_simulation import main
+from simpy_simulation import simulate_and_schedule
 import pandas as pd
 
 import time
@@ -23,6 +23,8 @@ from pymoo.optimize import minimize
 
 #z=1
 jobs_from_db = True
+o1_string = None
+f1_value = None
 #y=np.array(id_init)
 
 
@@ -38,14 +40,19 @@ class MyProblem(ElementwiseProblem):
         self.n_var = n_var
 
     def _evaluate(self, x, out, *args, **kwargs):
-        o1, o2, self.output_jobs = main(ids=x, input_jobs=self.input_jobs)
-        f1 = abs(o1[0])
+        o1, o2, self.output_jobs = simulate_and_schedule(ids=x, input_jobs=self.input_jobs)
+        f1 = abs(sum([float(num) for num in eval(o1[0])]))
         f2 = abs(o2[0])
+        global o1_string
+        global f1_value
+        if f1_value == None or f1 < f1_value:
+            f1_value = f1
+            o1_string = o1
 
         out["F"] = [f1, f2]
 
 
-def main_algorithm(gen_amount = 50, input_jobs = None):
+def main_algorithm(gen_amount = 5, input_jobs = None):
     
     print("Start")
     
@@ -58,7 +65,7 @@ def main_algorithm(gen_amount = 50, input_jobs = None):
 
     problem = MyProblem(input_jobs=input_jobs, n_var=amount_of_var)
     algorithm = NSGA2(
-                        pop_size=50,
+                        pop_size=1,
                         pop=id_init,
                         mutation=InversionMutation(),
                         #crossover=SBX(prob=0.9, eta=15),
@@ -93,7 +100,13 @@ def main_algorithm(gen_amount = 50, input_jobs = None):
     # np.savetxt('GA_Convergence.csv', data, delimiter=',', header=header, fmt='%f', comments='')
 
     X = res.X
-    F = res.F
+    global o1_string
+    o1_string = o1_string
+    o1_sum = sum([float(num) for num in eval(o1_string[0])])
+    if o1_sum != np.array(res.F)[0, 0]:
+        print("There is a calculation error")
+
+    F = [o1_string, np.array(res.F)[0, 1]] #, res.F[1]]
     output = [X, F, problem.output_jobs]
 
     return output 

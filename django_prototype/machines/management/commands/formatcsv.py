@@ -34,7 +34,7 @@ class Command(BaseCommand):
         df.rename(columns={'MaschNr':'resourceId'}, inplace=True)
         df = df.head(n=250000)#, if you want to take the first n rows of the dataset
         
-        print(df)
+        # print(df)
         df.to_csv('Auftragsplanung_kompremiert.csv')
 
         #Code which was used trying to directly import the csv into the db with this script. Did not work and threw no error
