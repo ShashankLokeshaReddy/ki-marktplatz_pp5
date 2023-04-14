@@ -13,7 +13,7 @@ import collections
 
 logging = False
 max_machine_duration_flag = [False]
-max_machine_duration_default = 604800.0
+max_machine_duration_default = 99999999999999.0 # 604800.0
 max_machine_duration = [max_machine_duration_default]
 iteration_start_time = [0]
 job_start_delays = []
@@ -233,7 +233,7 @@ def get_makespan(job_list):
         if not pd.isna(job["final_start"]):
             if not min_start or string_to_timestamp(job["final_start"]) < min_start:
                 min_start = string_to_timestamp(job["final_start"]) - job["setuptime_material"] - job["setuptime_coil"]
-                print(min_start, string_to_timestamp(job["final_start"]), job["setuptime_material"], job["setuptime_coil"])
+                # print(min_start, string_to_timestamp(job["final_start"]), job["setuptime_material"], job["setuptime_coil"])
             if not max_end or string_to_timestamp(job["final_end"]) > max_end:
                 max_end = string_to_timestamp(job["final_end"])
     if min_start != None and max_end != None:
