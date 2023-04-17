@@ -91,10 +91,14 @@ def baseline(self, sorting_tech):
         self.perform_update(serializer)
     
     detail_schedule = Detail.objects.all()
+    schedule = Job.objects.all()
+    jobserializer = JobsSerializer(schedule, many=True)
+    makespan, unique_machines = create_db_entries(self)
+    print("makespan comparision", output[0], makespan)
     if detail_schedule.exists(): 
         detail = detail_schedule[0] 
         detail.status = 2  # heuristic
-        detail.makespans = output[0]
+        detail.makespans = makespan
         detail.save() 
 
 def format_ind_time(date_str):
@@ -144,42 +148,84 @@ def run_genetic_optimizer_in_diff_process(self, request, input_jobs):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
     detail_schedule = Detail.objects.all()
+    schedule = Job.objects.all()
+    jobserializer = JobsSerializer(schedule, many=True)
+    makespan, unique_machines = create_db_entries(self)
+    print("makespan comparision", output[1][0], makespan)
     if detail_schedule.exists():
         detail = detail_schedule[0] 
         detail.status = 3  # optimized
-        detail.makespans = output[1][0]
+        detail.makespans = makespan
         detail.save() 
 
-def calculate_machine_utilization(job_list):
-    machine_duration = defaultdict(int)
-    total_duration = defaultdict(int)
+def string_to_timestamp(datestring):
+    return datetime.strptime(str(datestring), "%Y-%m-%dT%H:%M:%SZ")
 
+def get_makespan(self, job_list):
+    min_start = None
+    max_end = None
+    for job in job_list:
+        if not pd.isna(job["final_start"]):
+            if not min_start or string_to_timestamp(job["final_start"]) < min_start:
+                hours, minutes, seconds = map(int, str(job["setuptime_material"]).split(":"))
+                td = timedelta(hours=hours, minutes=minutes, seconds=seconds)
+                setuptime_material = pd.Timedelta(td)
+                hours, minutes, seconds = map(int, str(job["setuptime_coil"]).split(":"))
+                td = timedelta(hours=hours, minutes=minutes, seconds=seconds)
+                setuptime_coil = pd.Timedelta(td)
+                print(type(string_to_timestamp(job["final_start"])), type(job["setuptime_material"]))
+                print(job["final_start"], job["setuptime_material"])
+                min_start = string_to_timestamp(job["final_start"]) - setuptime_material - setuptime_coil
+                # print(min_start, string_to_timestamp(job["final_start"]), job["setuptime_material"], job["setuptime_coil"])
+            if not max_end or string_to_timestamp(job["final_end"]) > max_end:
+                max_end = string_to_timestamp(job["final_end"])
+    if min_start != None and max_end != None:
+        return (max_end - min_start).total_seconds()
+
+def calculate_machine_utilization(self, job_list):
+    machine_duration = defaultdict(int)
     for job in job_list:
         machine_list = job['machines'].split(',')
-        duration = job['duration_machine']
-        if duration is None:
-            continue
-        if 'day' in duration:
-            days, duration = duration.split(',')
-            days = int(days.split()[0])
-        else:
-            days = 0
-        hours, minutes, seconds = duration.split(':')
-        hours = int(hours)
-        minutes = int(minutes)
-        seconds = int(seconds)
-        total_seconds = (days * 24 * 60 * 60) + (hours * 60 * 60) + (minutes * 60) + seconds
-
+        hours, minutes, seconds = map(int, str(job["setuptime_material"]).split(":"))
+        td = timedelta(hours=hours, minutes=minutes, seconds=seconds)
+        setuptime_material = pd.Timedelta(td)
+        hours, minutes, seconds = map(int, str(job["setuptime_coil"]).split(":"))
+        td = timedelta(hours=hours, minutes=minutes, seconds=seconds)
+        setuptime_coil = pd.Timedelta(td)
+        print(type(string_to_timestamp(job["final_start"])), type(job["setuptime_material"]))
+        print(job["final_start"], job["setuptime_material"])
+        setup_start = string_to_timestamp(job["final_start"]) - setuptime_material - setuptime_coil
+        final_end = string_to_timestamp(job["final_end"])
+        # if duration <= 0:
+        #     continue
         for machine in machine_list:
-            machine_duration[machine] += total_seconds
-            total_duration[machine] += 24 * 60 * 60  # Total seconds in a day
+            if job['selected_machine'] == machine:
+                machine_duration[machine] += (final_end - setup_start).total_seconds()
 
     machine_utilization = {}
+    makespan = get_makespan(self, job_list)
+    Machine.objects.all().delete()
     for machine in machine_duration:
-        utilization = machine_duration[machine] / total_duration[machine]
+        utilization = machine_duration[machine] * 100 / makespan
         machine_utilization[machine] = utilization
+        machine_entry = Machine.objects.create(machineId=machine, percentageOccupancy=utilization, maxDuration=machine_duration[machine])
 
-    return machine_duration
+    print("machine_duration", machine_duration)
+    return makespan, machine_utilization
+
+def create_db_entries(self):
+    schedule = Job.objects.all()
+    serializer = JobsSerializer(schedule, many=True)
+    detail_schedule = Detail.objects.all()
+    if not detail_schedule.exists():
+        detail = Detail.objects.create(status=0, makespans=1)  # create a new Detail object with status=0
+    # machine_schedule = Machine.objects.all()
+    # if not machine_schedule.exists():
+    #     pass
+    makespan, unique_machines = calculate_machine_utilization(self, serializer.data)
+    print(unique_machines)
+    print("unique_machines")
+    return makespan, unique_machines
 
 class JobsViewSet(ModelViewSet):
     queryset = Job.objects.all()
@@ -205,13 +251,6 @@ class JobsViewSet(ModelViewSet):
         schedule = Job.objects.all()
         serializer = JobsSerializer(schedule, many=True)
         detail_schedule = Detail.objects.all() # 0 empty, 1 unplanned, 2 heuristic, 3 optimized
-        # if not detail_schedule.exists():
-        #     detail = Detail.objects.create(status=0, makespans=None)  # create a new Detail object with status=0
-        # machine_schedule = Machine.objects.all()
-        # if not machine_schedule.exists():
-        #     unique_machines = calculate_machine_utilization(serializer.data)
-        #     print(unique_machines)
-        #     print("unique_machines")
         detail_serializer = DetailsSerializer(detail_schedule, many=True)
         json_obj = {'Status':detail_serializer.data[0]['status'],'Table':serializer.data}
         return JsonResponse(json_obj, safe=False, status=status.HTTP_200_OK)
@@ -240,10 +279,13 @@ class JobsViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         detail_schedule = Detail.objects.all()
+        schedule = Job.objects.all()
+        jobserializer = JobsSerializer(schedule, many=True)
+        makespan, unique_machines = create_db_entries(self)
         if detail_schedule.exists(): 
             detail = detail_schedule[0] 
             detail.status = 1  # unplanned
-            detail.makespans = None
+            detail.makespans = makespan
             detail.save()
 
         message = "Individual job was saved successfully"
@@ -271,10 +313,13 @@ class JobsViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         detail_schedule = Detail.objects.all() # retrieve all Detail objects from the database
+        schedule = Job.objects.all()
+        jobserializer = JobsSerializer(schedule, many=True)
+        makespan, unique_machines = create_db_entries(self)
         if detail_schedule.exists():  # check if there are any Detail objects in the database
             detail = detail_schedule[0]  # get the first Detail object
             detail.status = 1  # unplanned
-            detail.makespans = None
+            detail.makespans = makespan
             detail.save()  # save the changes to the database
         message = "Individual job was saved successfully"
         return Response({"message": message}, status=status.HTTP_200_OK)
@@ -396,10 +441,13 @@ class JobsViewSet(ModelViewSet):
             job_instance.save()
 
         detail_schedule = Detail.objects.all() 
+        schedule = Job.objects.all()
+        jobserializer = JobsSerializer(schedule, many=True)
+        makespan, unique_machines = create_db_entries(self)
         if detail_schedule.exists():
             detail = detail_schedule[0] 
             detail.status = 1  # unplanned
-            detail.makespans = None
+            detail.makespans = makespan
             detail.save()
         message = "Upload successful"
         return Response({"message": message}, status=status.HTTP_200_OK)
@@ -411,7 +459,7 @@ class JobsViewSet(ModelViewSet):
         if detail_schedule.exists():
             detail = detail_schedule[0]
             detail.status = 0  # Empty
-            detail.makespans = None
+            detail.makespans = 1
             detail.save()  
         message = "All jobs were deleted successfully"
         return Response({"message": message}, status=status.HTTP_200_OK)
@@ -438,6 +486,15 @@ class JobsViewSet(ModelViewSet):
         message = "All jobs were saved successfully"
         return Response({"message": message}, status=status.HTTP_200_OK)
 
+    # gets all jobs
+    @action(detail=False, methods=['get'])
+    def getUtilization(self, request):
+        # Get schedule data from the database
+        machine_schedule = Machine.objects.all()
+        machine_serializer = MachinesSerializer(machine_schedule, many=True)
+        json_obj = {'MachineData':machine_serializer.data}
+        return JsonResponse(json_obj, safe=False, status=status.HTTP_200_OK)
+    
     # @action(methods=['put'], detail=True)
     # def update_entry(self, request, pk=None):
     #     instance = self.get_object()

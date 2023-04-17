@@ -25,6 +25,7 @@ from pymoo.optimize import minimize
 jobs_from_db = True
 o1_string = None
 f1_value = None
+best_jobs_list = None
 #y=np.array(id_init)
 
 
@@ -45,14 +46,16 @@ class MyProblem(ElementwiseProblem):
         f2 = abs(o2[0])
         global o1_string
         global f1_value
+        global best_jobs_list
         if f1_value == None or f1 < f1_value:
             f1_value = f1
             o1_string = o1
+            best_jobs_list = self.output_jobs
 
         out["F"] = [f1, f2]
 
 
-def main_algorithm(gen_amount = 50, input_jobs = None):
+def main_algorithm(gen_amount = 5, input_jobs = None):
     
     print("Start")
     
@@ -65,7 +68,7 @@ def main_algorithm(gen_amount = 50, input_jobs = None):
 
     problem = MyProblem(input_jobs=input_jobs, n_var=amount_of_var)
     algorithm = NSGA2(
-                        pop_size=50,
+                        pop_size=5,
                         pop=id_init,
                         mutation=InversionMutation(),
                         #crossover=SBX(prob=0.9, eta=15),
@@ -102,12 +105,14 @@ def main_algorithm(gen_amount = 50, input_jobs = None):
     X = res.X
     global o1_string
     o1_string = o1_string
+    global best_jobs_list
+    best_jobs_list = best_jobs_list
     o1_sum = sum([float(num) for num in eval(o1_string[0])])
     if o1_sum != np.array(res.F)[0, 0]:
         print("There is a calculation error")
 
     F = [o1_string, np.array(res.F)[0, 1]] #, res.F[1]]
-    output = [X, F, problem.output_jobs]
+    output = [X, F, best_jobs_list]
 
     return output 
     
