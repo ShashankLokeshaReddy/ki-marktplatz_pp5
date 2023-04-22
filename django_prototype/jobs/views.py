@@ -441,13 +441,13 @@ class JobsViewSet(ModelViewSet):
             job_instance.save()
 
         detail_schedule = Detail.objects.all() 
-        schedule = Job.objects.all()
-        jobserializer = JobsSerializer(schedule, many=True)
-        makespan, unique_machines = create_db_entries(self)
+        # schedule = Job.objects.all()
+        # jobserializer = JobsSerializer(schedule, many=True)
+        # makespan, unique_machines = create_db_entries(self)
         if detail_schedule.exists():
             detail = detail_schedule[0] 
             detail.status = 1  # unplanned
-            detail.makespans = makespan
+            detail.makespans = 1
             detail.save()
         message = "Upload successful"
         return Response({"message": message}, status=status.HTTP_200_OK)
@@ -494,7 +494,16 @@ class JobsViewSet(ModelViewSet):
         machine_serializer = MachinesSerializer(machine_schedule, many=True)
         json_obj = {'MachineData':machine_serializer.data}
         return JsonResponse(json_obj, safe=False, status=status.HTTP_200_OK)
-    
+
+     # gets makespan from details
+    @action(detail=False, methods=['get'])
+    def getMakespanFromDetails(self, request):
+        schedule = Job.objects.all()
+        jobserializer = JobsSerializer(schedule, many=True)
+        makespan, unique_machines = create_db_entries(self)
+        makespan_json = {'Makespan':makespan}
+        return JsonResponse(makespan_json, safe=False, status=status.HTTP_200_OK)  
+
     # @action(methods=['put'], detail=True)
     # def update_entry(self, request, pk=None):
     #     instance = self.get_object()
