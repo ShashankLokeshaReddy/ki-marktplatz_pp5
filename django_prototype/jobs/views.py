@@ -22,6 +22,8 @@ from details.models import Detail
 from details.serializer import DetailsSerializer
 from machines.models import Machine
 from machines.serializer import MachinesSerializer
+from holidays.models import Holiday
+from holidays.serializer import HolidaysSerializer
 
 scripts_dir_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..','scripts'))
 sys.path.append(scripts_dir_path)
@@ -503,6 +505,15 @@ class JobsViewSet(ModelViewSet):
         makespan, unique_machines = create_db_entries(self)
         makespan_json = {'Makespan':makespan}
         return JsonResponse(makespan_json, safe=False, status=status.HTTP_200_OK)  
+
+     # gets holidays
+    @action(detail=False, methods=['get'])
+    def getHolidays(self, request):
+        schedule = Holiday.objects.all()
+        holidayserializer = HolidaysSerializer(schedule, many=True)
+        # makespan, unique_machines = create_db_entries(self)
+        holidays_json = {'Holidays':holidayserializer.data}
+        return JsonResponse(holidays_json, safe=False, status=status.HTTP_200_OK)  
 
     # @action(methods=['put'], detail=True)
     # def update_entry(self, request, pk=None):

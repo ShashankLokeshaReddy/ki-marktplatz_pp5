@@ -45,7 +45,8 @@ INSTALLED_APPS = [
     'import_export',
     'machines',
     'details',
-    'jobs'
+    'jobs',
+    'holidays'
     
 ]
 
