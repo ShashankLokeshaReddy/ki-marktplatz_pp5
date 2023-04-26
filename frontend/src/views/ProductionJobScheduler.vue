@@ -37,6 +37,58 @@ export default defineComponent({
             ],
             eventMaxStack: 3,
             slotDuration: '00:05:00',
+            slotLabelContent: ({ date }) => {
+                const hour = date.getHours();
+                const minute = date.getMinutes();
+                const startHour = 0;
+                const endHour = 24;
+            },
+            slotLabelClassNames: ({ date, isLabel }) => {
+                const hour = date.getHours();
+                const startHour = 7;
+                const endHour = 23;
+                const classNames = ["slot-label"];
+                const holidays = ["2022-01-01", "2022-04-15", "2022-04-16", "2022-04-17", "2022-04-18", "2022-05-01", "2022-05-26", "2022-05-27", "2022-05-28", "2022-06-05", "2022-06-06", "2022-06-16", "2022-06-17", "2022-06-18", "2022-10-03", "2022-10-31", "2022-11-01", "2022-12-24", "2022-12-25", "2022-12-26", "2022-12-27", "2022-12-28", "2022-12-29", "2022-12-30", "2022-12-31"];
+                const formattedDate = date.toISOString().substring(0, 10);
+                if (holidays.includes(formattedDate)) {
+                    classNames.push("weekend-non-operating-hours");
+                } else if ( (hour < startHour || hour >= endHour) && ![0, 6].includes(date.getDay()) ) {
+                    classNames.push("non-operating-hours");
+                } else if ( ([0, 6].includes(date.getDay())) ) {
+                    classNames.push("weekend-non-operating-hours");
+                } else {
+                    classNames.push("operating-hours");
+                }
+                
+                if (isLabel) {
+                    classNames.push("date-label");
+                }
+
+                return classNames.join(" ");
+            },
+            slotLaneClassNames: ({ date, isLabel }) => {
+                const hour = date.getHours();
+                const startHour = 7;
+                const endHour = 23;
+                const classNames = ["slot-label"];
+                const holidays = ["2022-01-01", "2022-04-15", "2022-04-16", "2022-04-17", "2022-04-18", "2022-05-01", "2022-05-26", "2022-05-27", "2022-05-28", "2022-06-05", "2022-06-06", "2022-06-16", "2022-06-17", "2022-06-18", "2022-10-03", "2022-10-31", "2022-11-01", "2022-12-24", "2022-12-25", "2022-12-26", "2022-12-27", "2022-12-28", "2022-12-29", "2022-12-30", "2022-12-31"];
+                const formattedDate = date.toISOString().substring(0, 10);
+                if (holidays.includes(formattedDate)) {
+                    classNames.push("weekend-non-operating-hours");
+                } else if ( (hour < startHour || hour >= endHour) && ![0, 6].includes(date.getDay()) ) {
+                    classNames.push("non-operating-hours");
+                } else if ( ([0, 6].includes(date.getDay())) ) {
+                    classNames.push("weekend-non-operating-hours");
+                } else {
+                    classNames.push("operating-hours");
+                }
+                
+                if (isLabel) {
+                    classNames.push("date-label");
+                }
+
+                return classNames.join(" ");
+            },
             locale: "ger",
             initialView: 'resourceTimelineDay',
             schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
@@ -361,5 +413,19 @@ export default defineComponent({
 .fwd{
     height:20px;
     vertical-align: center;
+}
+.slot-label.operating-hours {
+  background-color: #d3d3d3;
+}
+.slot-label.non-operating-hours {
+  background-color: #7f7f7f;
+}
+.slot-label.weekend-non-operating-hours {
+  background-color: #151515;
+  color: #FFFFFF;
+}
+.date-label {
+  font-weight: bold;
+  text-align: center;
 }
 </style>

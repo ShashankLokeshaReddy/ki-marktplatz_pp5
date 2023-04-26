@@ -16,6 +16,9 @@ import InteractionPlugin from '@fullcalendar/interaction'
 import ListPlugin from '@fullcalendar/list'
 import ResourceTimelinePlugin from '@fullcalendar/resource-timeline'
 import axios from 'axios'
+import moment from 'moment';
+
+const holidays = ["2022-01-01", "2022-04-15", "2022-04-16", "2022-04-17", "2022-04-18", "2022-05-01", "2022-05-26", "2022-05-27", "2022-05-28", "2022-06-05", "2022-06-06", "2022-06-16", "2022-06-17", "2022-06-18", "2022-10-03", "2022-10-31", "2022-11-01", "2022-12-24", "2022-12-25", "2022-12-26", "2022-12-27", "2022-12-28", "2022-12-29", "2022-12-30", "2022-12-31"];
 
 export default defineComponent({
      
@@ -25,12 +28,12 @@ export default defineComponent({
         return {
             calendarApi: null,
             calendarOptions: {
-                plugins: [ 
-                    DayGridPlugin,
-                    TimegridPlugin,
-                    InteractionPlugin,
-                    ListPlugin,
-                    ResourceTimelinePlugin,
+            plugins: [ 
+                DayGridPlugin,
+                TimegridPlugin,
+                InteractionPlugin,
+                ListPlugin,
+                ResourceTimelinePlugin,
             ],
             selectOverlap: false,
             eventOverlap: false,
@@ -49,16 +52,6 @@ export default defineComponent({
                 const classNames = ["slot-label"];
                 const holidays = ["2022-01-01", "2022-04-15", "2022-04-16", "2022-04-17", "2022-04-18", "2022-05-01", "2022-05-26", "2022-05-27", "2022-05-28", "2022-06-05", "2022-06-06", "2022-06-16", "2022-06-17", "2022-06-18", "2022-10-03", "2022-10-31", "2022-11-01", "2022-12-24", "2022-12-25", "2022-12-26", "2022-12-27", "2022-12-28", "2022-12-29", "2022-12-30", "2022-12-31"];
                 const formattedDate = date.toISOString().substring(0, 10);
-                // var holiday_flag = false
-                // Check if date is a holiday
-                // axios.get('http://localhost:8000/api/jobs/getHolidays').then(response => {
-                //     holidays = Object.values(response.data["Holidays"]).map(item => item.day);
-                //     formattedDate = date.toISOString().substring(0, 10);
-                //     if (holidays.includes(formattedDate)) {
-                //         holiday_flag = true;
-                //         classNames.push("weekend-non-operating-hours");
-                //     }
-                // });
                 if (holidays.includes(formattedDate)) {
                     classNames.push("weekend-non-operating-hours");
                 } else if ( (hour < startHour || hour >= endHour) && ![0, 6].includes(date.getDay()) ) {
@@ -75,7 +68,29 @@ export default defineComponent({
 
                 return classNames.join(" ");
             },
+            slotLaneClassNames: ({ date, isLabel }) => {
+                const hour = date.getHours();
+                const startHour = 7;
+                const endHour = 23;
+                const classNames = ["slot-label"];
+                const holidays = ["2022-01-01", "2022-04-15", "2022-04-16", "2022-04-17", "2022-04-18", "2022-05-01", "2022-05-26", "2022-05-27", "2022-05-28", "2022-06-05", "2022-06-06", "2022-06-16", "2022-06-17", "2022-06-18", "2022-10-03", "2022-10-31", "2022-11-01", "2022-12-24", "2022-12-25", "2022-12-26", "2022-12-27", "2022-12-28", "2022-12-29", "2022-12-30", "2022-12-31"];
+                const formattedDate = date.toISOString().substring(0, 10);
+                if (holidays.includes(formattedDate)) {
+                    classNames.push("weekend-non-operating-hours");
+                } else if ( (hour < startHour || hour >= endHour) && ![0, 6].includes(date.getDay()) ) {
+                    classNames.push("non-operating-hours");
+                } else if ( ([0, 6].includes(date.getDay())) ) {
+                    classNames.push("weekend-non-operating-hours");
+                } else {
+                    classNames.push("operating-hours");
+                }
+                
+                if (isLabel) {
+                    classNames.push("date-label");
+                }
 
+                return classNames.join(" ");
+            },
             locale: "ger",
             initialView: 'resourceTimelineDay',
             schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
@@ -83,7 +98,7 @@ export default defineComponent({
                 left: 'prev next today myCustomButton',
                 center: 'title',
                 right: 'resourceTimelineMonth resourceTimelineWeek resourceTimelineDay',
-                    },
+            },
             customButtons: {
                 myCustomButton: {
                     text: 'speichern',
@@ -204,7 +219,7 @@ export default defineComponent({
             },
         }
     },
-   async created(){
+    async created(){
         var response = await fetch('http://localhost:8000/api/jobs/getSchedule')
         var output_resp = await response.json()
         var status = output_resp["Status"]
@@ -266,14 +281,15 @@ export default defineComponent({
     height:20px;
     vertical-align: center;
 }
-.slot-label.non-operating-hours {
-  background-color: #ccc;
-}
 .slot-label.operating-hours {
-  background-color: #ffff00;
+  background-color: #d3d3d3;
+}
+.slot-label.non-operating-hours {
+  background-color: #7f7f7f;
 }
 .slot-label.weekend-non-operating-hours {
-  background-color: #ff0000;
+  background-color: #151515;
+  color: #FFFFFF;
 }
 .date-label {
   font-weight: bold;
