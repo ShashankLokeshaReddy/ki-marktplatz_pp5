@@ -39,6 +39,8 @@ export default defineComponent({
             eventOverlap: false,
             eventMaxStack: 3,
             slotDuration: '00:05:00',
+            resourceAreaWidth: "10%",
+            scrollTimeReset: false,
             slotLabelContent: ({ date }) => {
                 const hour = date.getHours();
                 const minute = date.getMinutes();
@@ -266,6 +268,8 @@ export default defineComponent({
         this.calendarOptions["events"] = events_var
         this.calendarOptions["resources"] = resources_var
         console.log(this.calendarOptions["events"])
+        //let calendar = this.calendarOptions["calendarApi"];
+        
     }
 
 })

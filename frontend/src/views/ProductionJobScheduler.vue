@@ -37,6 +37,8 @@ export default defineComponent({
             ],
             eventMaxStack: 3,
             slotDuration: '00:05:00',
+            resourceAreaWidth: "10%",
+            scrollTimeReset: false,
             slotLabelContent: ({ date }) => {
                 const hour = date.getHours();
                 const minute = date.getMinutes();
