@@ -57,15 +57,15 @@ function get_EventorDBDuration(info, totalMilliseconds, resize) {
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
         const isHoliday = holidays.includes(currentDate.toISOString().substring(0, 10));
         const isOperationalHour = !isWeekend && !isHoliday && currentDate.getHours() >= 7 && currentDate.getHours() <= 23;
-        event_duration += 60 * 1000;
+        event_duration += 1000;
         if (isOperationalHour) {
-            duration += 60 * 1000; // add 1 min in milliseconds
+            duration += 1000; // add 1 sec in milliseconds
         }
         if (totalMilliseconds._milliseconds <= duration)
         {
             duration_flag = false;
         }
-        currentDate.setTime(currentDate.getTime() + 60 * 1000); // add 1 min
+        currentDate.setTime(currentDate.getTime() + 1000); // add 1 sec
     }
     console.log(totalMilliseconds._milliseconds);
     console.log("duration..",duration);
