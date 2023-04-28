@@ -290,7 +290,7 @@ class JobsViewSet(ModelViewSet):
             detail.makespans = makespan
             detail.save()
 
-        message = "Individual job was saved successfully"
+        message = "Der Auftrag wurde erfolgreich gespeichert"
         return Response({"message": message}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'])
@@ -323,7 +323,7 @@ class JobsViewSet(ModelViewSet):
             detail.status = 1  # unplanned
             detail.makespans = makespan
             detail.save()  # save the changes to the database
-        message = "Individual job was saved successfully"
+        message = "Der Auftrag wurde erfolgreich gespeichert"
         return Response({"message": message}, status=status.HTTP_200_OK)
 
     # updates a batch of jobs
@@ -360,44 +360,44 @@ class JobsViewSet(ModelViewSet):
         p.start()
         pid.append(p.pid)
         p.join()
-        response = {'message': 'Genetic optimizer complete.'}
+        response = {'message': 'Genetic Optimizer abgeschlossen.'}
         return Response(response)
 
     @action(detail=False, methods=['post'])
     def run_sjf(self, request):
         baseline(self, sorting_tech = "SJF")
-        return Response({'message': 'SJF completed.'})
+        return Response({'message': 'SJF abgeschlossen.'})
 
     @action(detail=False, methods=['post'])
     def run_ljf(self, request):
         baseline(self, sorting_tech = "LJF")
-        return Response({'message': 'LJF completed.'})
+        return Response({'message': 'LJF abgeschlossen.'})
 
     @action(detail=False, methods=['post'])
     def run_deadline_first(self, request):
         baseline(self, sorting_tech = "end")
-        return Response({'message': 'Early Deadline First completed.'})
+        return Response({'message': 'Early Deadline First abgeschlossen.'})
 
     @action(detail=False, methods=['post'])
     def run_release_first(self, request):
         baseline(self, sorting_tech = "start")
-        return Response({'message': 'Early Release Date First completed.'})
+        return Response({'message': 'Vorzeitiges Veröffentlichungsdatum Zuerst abgeschlossen.'})
 
     @action(detail=False, methods=['post'])
     def run_random(self, request):
         baseline(self, sorting_tech = "random")
-        return Response({'message': 'Release Date Scheduling completed.'})
+        return Response({'message': 'Planung des Veröffentlichungsdatums abgeschlossen.'})
 
     @action(detail=False, methods=['post'])
     def stop_genetic_optimizer(self, request):
         try:
             os.kill(pid[0], signal.SIGTERM)
             delete_all_elements(pid)
-            return Response({'message': 'Stopping Genetic Optimizer completed.'})
+            return Response({'message': 'Anhalten des Genetic Optimizer abgeschlossen.'})
         except OSError:
             pass
         delete_all_elements(pid)
-        return Response({'message': 'Could not find running genetic optimizer.'})     
+        return Response({'message': 'Der laufende genetische Optimierer konnte nicht gefunden werden.'})     
 
     @action(detail=False, methods=['post'])
     def uploadCSV(self, request):
@@ -451,7 +451,7 @@ class JobsViewSet(ModelViewSet):
             detail.status = 1  # unplanned
             detail.makespans = 1
             detail.save()
-        message = "Upload successful"
+        message = "Hochladen erfolgreich"
         return Response({"message": message}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'])
@@ -463,7 +463,7 @@ class JobsViewSet(ModelViewSet):
             detail.status = 0  # Empty
             detail.makespans = 1
             detail.save()  
-        message = "All jobs were deleted successfully"
+        message = "Alle Jobs wurden erfolgreich gelöscht"
         return Response({"message": message}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'])
@@ -485,7 +485,7 @@ class JobsViewSet(ModelViewSet):
             for job in jobs:
                 writer.writerow([job.job, job.item, job.order_release, job.tube_type, job.selected_machine, job.machines, job.calculated_setup_time, job.tool, job.setuptime_material, job.setuptime_coil, job.duration_machine, job.duration_manual, job.shift, job.deadline, job.latest_start, job.calculated_start, job.calculated_end, job.planned_start, job.planned_end, job.final_start, job.final_end, job.setup_time, job.status])
 
-        message = "All jobs were saved successfully"
+        message = "Alle Jobs wurden erfolgreich gespeichert"
         return Response({"message": message}, status=status.HTTP_200_OK)
 
     # gets all jobs

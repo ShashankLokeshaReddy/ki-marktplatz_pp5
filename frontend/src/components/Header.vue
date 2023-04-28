@@ -1,6 +1,6 @@
 <template>
   <header class="my-header">
-    <v-container align="center" id="my-toggle">
+    <v-container fluid align="center" id="my-toggle">
       <v-btn-toggle mandatory tile color="primary" class="d-flex flex-row my-btn-toggle">
         <v-btn class="flex-grow-1" to="/">Maschinenansicht</v-btn>
         <v-btn class="flex-grow-1" to="/production">Production Jobansicht</v-btn>
@@ -10,7 +10,7 @@
       </v-btn-toggle>
     </v-container>
   </header>
-  <v-container class="my-container">
+  <v-container fluid class="my-container">
     <v-row align="center">
       <v-col align="center">
         <p>Optimierungsstatus: {{ mappedStatus }}</p>

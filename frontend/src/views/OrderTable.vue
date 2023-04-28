@@ -10,13 +10,13 @@
       </v-col>
       <v-col align="center" class="mb-4">
         <v-btn class="bordered flex-grow-1 mr-2" @click="runGeneticOptimizer">Genetic Optimizer</v-btn>
-        <v-btn class="bordered flex-grow-1 mr-2" color="error" @click="stopProcess">Stop Process</v-btn>
+        <v-btn class="bordered flex-grow-1 mr-2" color="error" @click="stopProcess">GA stoppen</v-btn>
         <v-btn class="bordered flex-grow-1 mr-2" @click="saveJobs">Save Job Orders</v-btn>
       </v-col>
       <v-col align="center" class="mb-4">
         <input type="file" ref="fileInput" @change="handleFileUpload"/>
-        <v-btn class="bordered" @click="upload">Upload Job Orders</v-btn>
-        <v-btn class="bordered" color="error" @click="deleteJobs">Delete Job Orders</v-btn>
+        <v-btn class="bordered" @click="upload">Arbeitsaufträge hochladen</v-btn>
+        <v-btn class="bordered" color="error" @click="deleteJobs">Arbeitsaufträge löschen</v-btn>
       </v-col>
     </v-row>
   </v-container>
@@ -68,7 +68,7 @@ export default {
 
   methods: {
     saveJobs() {
-      const confirmed = window.confirm("Would you like to save all jobs in a CSV?");
+      const confirmed = window.confirm("Möchten Sie alle Jobs in einer CSV-Datei speichern?");
       if (!confirmed) {
         return;
       }
@@ -258,7 +258,7 @@ export default {
         });
     },
     deleteJobs() {
-      const confirmed = window.confirm("Would you like to delete all jobs?");
+      const confirmed = window.confirm("Möchten Sie alle Jobs löschen?");
       if (!confirmed) {
         return;
       }

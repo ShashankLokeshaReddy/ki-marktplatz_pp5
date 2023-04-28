@@ -103,7 +103,7 @@ export default defineComponent({
                 myCustomButton: {
                     text: 'speichern',
                     click: function() {
-                        const confirmed = window.confirm("Would you like to save all jobs in a CSV?");
+                        const confirmed = window.confirm("Möchten Sie alle Jobs in einer CSV-Datei speichern?");
                         if (!confirmed) {
                             return;
                         }
@@ -130,7 +130,7 @@ export default defineComponent({
             resourceAreaColumns: [
                 {
                 field: 'title',
-                headerContent: 'Jobs'
+                headerContent: 'Arbeitsauftrag'
                 }
             ],
 
