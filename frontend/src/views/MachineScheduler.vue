@@ -20,6 +20,84 @@ import moment from 'moment';
 
 const holidays = ["2022-01-01", "2022-04-15", "2022-04-16", "2022-04-17", "2022-04-18", "2022-05-01", "2022-05-26", "2022-05-27", "2022-05-28", "2022-06-05", "2022-06-06", "2022-06-16", "2022-06-17", "2022-06-18", "2022-10-03", "2022-10-31", "2022-11-01", "2022-12-24", "2022-12-25", "2022-12-26", "2022-12-27", "2022-12-28", "2022-12-29", "2022-12-30", "2022-12-31"];
 
+function convertToMilliseconds(duration) {
+  let [days, time] = duration.split(", ");
+  let [hours, minutes, seconds] = time.split(":").map(Number);
+  let totalMilliseconds = days * 24 * 60 * 60 * 1000 + hours * 60 * 60 * 1000 + minutes * 60 * 1000 + seconds * 1000;
+  return totalMilliseconds;
+}
+
+function convertMillisecondsToDuration(milliseconds) {
+  const seconds = Math.floor((milliseconds / 1000) % 60);
+  const minutes = Math.floor((milliseconds / (1000 * 60)) % 60);
+  const hours = Math.floor((milliseconds / (1000 * 60 * 60)) % 24);
+  const days = Math.floor(milliseconds / (1000 * 60 * 60 * 24));
+  const formattedHours = hours.toString().padStart(2, '0');
+  const formattedMinutes = minutes.toString().padStart(2, '0');
+  const formattedSeconds = seconds.toString().padStart(2, '0');
+  let formattedDuration = '';
+  if (days > 0) {
+    formattedDuration += `${days} day${days > 1 ? 's' : ''}, `;
+  }
+  formattedDuration += `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
+  return formattedDuration;
+}
+
+function get_EventorDBDuration(info, totalMilliseconds, resize) {
+    const start = new Date(info.event.start);
+    const end = new Date(info.event.end);
+    const startHour = Math.max(start.getHours(), 7);
+    const endHour = Math.min(end.getHours(), 23);
+    let duration = 0;
+    let event_duration = 0;
+    let currentDate = new Date(start);
+    let duration_flag = true;
+    while (duration_flag) {
+        const dayOfWeek = currentDate.getDay();
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        const isHoliday = holidays.includes(currentDate.toISOString().substring(0, 10));
+        const isOperationalHour = !isWeekend && !isHoliday && currentDate.getHours() >= 7 && currentDate.getHours() <= 23;
+        event_duration += 60 * 1000;
+        if (isOperationalHour) {
+            duration += 60 * 1000; // add 1 min in milliseconds
+        }
+        if (totalMilliseconds._milliseconds <= duration)
+        {
+            duration_flag = false;
+        }
+        currentDate.setTime(currentDate.getTime() + 60 * 1000); // add 1 min
+    }
+    console.log(totalMilliseconds._milliseconds);
+    console.log("duration..",duration);
+    console.log(event_duration);
+    if resize{
+        return duration;
+    }
+    else{
+        return event_duration;
+    }
+}
+
+function get_ValidDuration(info) {
+  const start = new Date(info.event.start);
+  const end = new Date(info.event.end);
+  const startHour = Math.max(start.getHours(), 7);
+  const endHour = Math.min(end.getHours(), 23);
+  let validDuration = 0;
+  let currentDate = new Date(start);
+  while (currentDate < end) {
+    const dayOfWeek = currentDate.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const isHoliday = holidays.includes(currentDate.toISOString().substring(0, 10));
+    const isOperationalHour = !isWeekend && !isHoliday && currentDate.getHours() >= 7 && currentDate.getHours() <= 23;
+    if (isOperationalHour) {
+      validDuration += 60 * 1000; // add 1 min in milliseconds
+    }
+    currentDate.setTime(currentDate.getTime() + 60 * 1000); // add 1 min
+  }
+  return validDuration;
+}
+
 export default defineComponent({
      
     //props: [FullCalendar],
@@ -52,7 +130,6 @@ export default defineComponent({
                 const startHour = 7;
                 const endHour = 23;
                 const classNames = ["slot-label"];
-                const holidays = ["2022-01-01", "2022-04-15", "2022-04-16", "2022-04-17", "2022-04-18", "2022-05-01", "2022-05-26", "2022-05-27", "2022-05-28", "2022-06-05", "2022-06-06", "2022-06-16", "2022-06-17", "2022-06-18", "2022-10-03", "2022-10-31", "2022-11-01", "2022-12-24", "2022-12-25", "2022-12-26", "2022-12-27", "2022-12-28", "2022-12-29", "2022-12-30", "2022-12-31"];
                 const formattedDate = date.toISOString().substring(0, 10);
                 if (holidays.includes(formattedDate)) {
                     classNames.push("weekend-non-operating-hours");
@@ -75,7 +152,6 @@ export default defineComponent({
                 const startHour = 7;
                 const endHour = 23;
                 const classNames = ["slot-label"];
-                const holidays = ["2022-01-01", "2022-04-15", "2022-04-16", "2022-04-17", "2022-04-18", "2022-05-01", "2022-05-26", "2022-05-27", "2022-05-28", "2022-06-05", "2022-06-06", "2022-06-16", "2022-06-17", "2022-06-18", "2022-10-03", "2022-10-31", "2022-11-01", "2022-12-24", "2022-12-25", "2022-12-26", "2022-12-27", "2022-12-28", "2022-12-29", "2022-12-30", "2022-12-31"];
                 const formattedDate = date.toISOString().substring(0, 10);
                 if (holidays.includes(formattedDate)) {
                     classNames.push("weekend-non-operating-hours");
@@ -134,6 +210,10 @@ export default defineComponent({
             ],
 
             resources: [],
+            eventConstraint: {
+                start: '07:00', // opening time
+                end: '23:00', // closing time
+            },
             events: [] as { resourceId : string; title: string; start: Date; end: Date; eventTextColor : string;}[],
             eventDidMount: (info) => {
                 info.el.style.background = `blue`;
@@ -149,11 +229,52 @@ export default defineComponent({
                 
                 // Check whether the selected machine is allowed
                 if (allowedMachines.includes(selectedMachine)) {
+                    // Calculate the duration between the original start and end times
+                    const origStart = moment(info.event.start);
+                    const origEnd = moment(info.event.end);
+                    const duration = info.event.extendedProps.duration_machine
+                    console.log("duration", duration)
+                    var days = 0
+                    var time = 0
+                    if (duration.includes("days")){
+                        days = parseInt(duration.split(" ")[0]);
+                        time = duration.split(", ")[1];
+                    }
+                    else{
+                        time = duration;
+                    }
+                    const hours = parseInt(time.split(":")[0]);
+                    const minutes = parseInt(time.split(":")[1]);
+                    const seconds = parseInt(time.split(":")[2]);
+                    const millisecondsPerDay = 24 * 60 * 60 * 1000;
+                    const millisecondsPerHour = 60 * 60 * 1000;
+                    const millisecondsPerMinute = 60 * 1000;
+                    const millisecondsPerSecond = 1000;
+                    const totalMilliseconds = moment.duration(days * millisecondsPerDay + hours * millisecondsPerHour + minutes * millisecondsPerMinute + seconds * millisecondsPerSecond);
+                    console.log("totalMilliseconds", moment.duration(origEnd.diff(origStart)), totalMilliseconds)
+                    // const duration = moment.duration(origEnd.diff(origStart));
+
+                    // Calculate the new start and end times
+                    // let newStart = moment(info.event.start);
+                    
+                    let valid_duration = get_ValidDuration(info);
+                    console.log("valid_duration",valid_duration);
+                    const valid_duration_s = convertMillisecondsToDuration(valid_duration);
+                    info.event.setExtendedProp('duration_machine', valid_duration_s);
+                    const start_s = new Date(info.event.start);
+                    const startISOString = start_s.toISOString().substring(0, 19) + "Z";
+                    const end_s = new Date(info.event.end);
+                    const endISOString = end_s.toISOString().substring(0, 19) + "Z";
+                    console.log(convertMillisecondsToDuration(34260000)); // Output: "0:57:06"
+                    
+                    console.log("valid_duration_s", valid_duration_s);
+
                     const jobs_data = {
                     job: info.event.title,
-                    final_start: info.event.start,
-                    final_end: info.event.end,
-                    selected_machine: selectedMachine
+                    final_start: startISOString,
+                    final_end: endISOString,
+                    selected_machine: selectedMachine,
+                    duration_machine: valid_duration_s
                     };
 
                     const formData = new FormData();
@@ -176,40 +297,80 @@ export default defineComponent({
                 }
             },
             eventDrop: (info) => {
-                // Get the selected machine
-                var resources = info.event.getResources();
-                var selectedMachine = resources[0]["title"];
-                
-                var machines = info.event.extendedProps.machines;
-                var allowedMachines = machines.split(',');
-                
-                // Check whether the selected machine is allowed
-                if (allowedMachines.includes(selectedMachine)) {
-                    const jobs_data = {
-                    job: info.event.title,
-                    final_start: info.event.start,
-                    final_end: info.event.end,
-                    selected_machine: selectedMachine
-                    };
-                    console.log("jobs_data at VUe:",jobs_data);
-                    const formData = new FormData();
-                    for (let key in jobs_data) {
-                    formData.append(key, jobs_data[key]);
-                    }
+            // Get the selected machine
+            var resources = info.event.getResources();
+            var selectedMachine = resources[0]["title"];
 
-                    axios.post('http://localhost:8000/api/jobs/setInd/', formData)
-                    .then(response => {
-                        console.log(response.data);
-                    })
-                    .catch(error => {
-                        console.log(error);
-                    });
-                } 
-                else {
-                    // If the selected machine is not allowed, revert the event to its original position
-                    info.revert();
-                    alert('Cannot drop event as it has constraints to run on following machines: ' + info.event.extendedProps.machines);
+            var machines = info.event.extendedProps.machines;
+            var allowedMachines = machines.split(',');
+
+            // Check whether the selected machine is allowed
+            if (allowedMachines.includes(selectedMachine)) {
+                // Calculate the duration between the original start and end times
+                const origStart = moment(info.event.start);
+                const origEnd = moment(info.event.end);
+                const duration = info.event.extendedProps.duration_machine
+                console.log("duration", duration)
+                var days = 0
+                var time = 0
+                if (duration.includes("days")){
+                    days = parseInt(duration.split(" ")[0]);
+                    time = duration.split(", ")[1];
                 }
+                else{
+                    time = duration;
+                }
+                const hours = parseInt(time.split(":")[0]);
+                const minutes = parseInt(time.split(":")[1]);
+                const seconds = parseInt(time.split(":")[2]);
+                const millisecondsPerDay = 24 * 60 * 60 * 1000;
+                const millisecondsPerHour = 60 * 60 * 1000;
+                const millisecondsPerMinute = 60 * 1000;
+                const millisecondsPerSecond = 1000;
+                const totalMilliseconds = moment.duration(days * millisecondsPerDay + hours * millisecondsPerHour + minutes * millisecondsPerMinute + seconds * millisecondsPerSecond);
+                console.log("totalMilliseconds", moment.duration(origEnd.diff(origStart)), totalMilliseconds)
+                // const duration = moment.duration(origEnd.diff(origStart));
+
+                // Calculate the new start and end times
+                // let newStart = moment(info.event.start);
+                
+                let event_duration = get_EventorDBDuration(info, totalMilliseconds, false);
+                console.log("event_duration", event_duration);
+                let newEnd = moment(info.event.start).add(moment.duration(event_duration));
+
+                // Set the new start and end times
+                // info.event.setStart(newStart.toISOString());
+                info.event.setEnd(newEnd.toISOString());
+                console.log("fghg",info.event.start,info.event.end)
+                const start_s = new Date(info.event.start);
+                const startISOString = start_s.toISOString().substring(0, 19) + "Z";
+                const end_s = new Date(info.event.end);
+                const endISOString = end_s.toISOString().substring(0, 19) + "Z";
+                const jobs_data = {
+                job: info.event.title,
+                final_start: startISOString,
+                final_end: endISOString,
+                selected_machine: selectedMachine
+                };
+
+                const formData = new FormData();
+                for (let key in jobs_data) {
+                formData.append(key, jobs_data[key]);
+                }
+
+                axios.post('http://localhost:8000/api/jobs/setInd/', formData)
+                .then(response => {
+                console.log(response.data);
+                })
+                .catch(error => {
+                console.log(error);
+                });
+            } 
+            else {
+                // If the selected machine is not allowed, revert the event to its original position
+                info.revert();
+                alert('Cannot drop event as it has constraints to run on following machines: ' + info.event.extendedProps.machines);
+            }
             },
             mounted() {
                 this.$nextTick(() => {
@@ -242,7 +403,8 @@ export default defineComponent({
                 "display":'auto',
                 "className": "fwd",
                 "extendedProps": {
-                    "machines": output[i]["machines"]
+                    "machines": output[i]["machines"],
+                    "duration_machine": output[i]["duration_machine"]
                 }
             };
             events_var.push(temp_event);
@@ -268,8 +430,6 @@ export default defineComponent({
         this.calendarOptions["events"] = events_var
         this.calendarOptions["resources"] = resources_var
         console.log(this.calendarOptions["events"])
-        //let calendar = this.calendarOptions["calendarApi"];
-        
     }
 
 })
