@@ -175,29 +175,13 @@ class ManufacturingLayer:
             valid_duration = 0
             total_duration = 0
             start_datetime = datetime.fromtimestamp(start)
+            
             while valid_duration < duration_machine:
                 if start_datetime.time() >= datetime.strptime("07:00", "%H:%M").time() and start_datetime.time() < datetime.strptime("23:00", "%H:%M").time() and start_datetime.weekday() < 5 and start_datetime.strftime('%Y-%m-%d') not in holidays:
-                    if total_duration == 0 and (start_datetime.date() == (start_datetime + timedelta(seconds=duration_machine)).date() and start_datetime.time() >= datetime.strptime("07:00", "%H:%M").time() and (start_datetime + timedelta(seconds=duration_machine)).time() <= datetime.strptime("23:00", "%H:%M").time()):
-                        valid_duration += duration_machine
-                        total_duration += duration_machine
-                        start_datetime += timedelta(seconds=duration_machine)
-                        # print(total_duration, "1st if", start_datetime)
-                    elif total_duration != 0 and (start_datetime.date() == (start_datetime + timedelta(seconds=duration_machine)).date() and start_datetime.time() >= datetime.strptime("07:00", "%H:%M").time() and (start_datetime + timedelta(seconds=duration_machine)).time() <= datetime.strptime("23:00", "%H:%M").time()):
-                        pending_duration = duration_machine - valid_duration
-                        valid_duration += pending_duration
-                        total_duration += pending_duration
-                        start_datetime += timedelta(seconds=pending_duration)
-                        # print(total_duration, "pending_duration", pending_duration, start_datetime)
-                    else:
-                        valid_duration += 1
-                        total_duration += 1
-                        start_datetime += timedelta(seconds=1)
-                        # print(total_duration, "else", start_datetime)
-                else:
-                    total_duration += 1
-                    start_datetime += timedelta(seconds=1)
-                    # print(total_duration, "last else", start_datetime)
-                       
+                    valid_duration += 1
+                total_duration += 1
+                start_datetime += timedelta(seconds=1)
+            # print(duration_machine, valid_duration, total_duration)    
             yield self.env.timeout(total_duration)
             job["final_end"] = datetime.fromtimestamp(self.env.now).strftime("%Y-%m-%d %H:%M:%S")
             # job["duration_machine"] = string_to_timestamp(job["final_end"]) - string_to_timestamp(job["final_start"])
@@ -284,7 +268,7 @@ def get_desired_start(job_list):
         setuptime_material = job["setuptime_material"]
         setuptime_coil = job["setuptime_coil"]
         job_duration = job['duration_machine']
-        latest_start_time = job['deadline'] - job_duration - job_duration - setuptime_material - setuptime_coil
+        latest_start_time = job['deadline'] - job_duration - setuptime_material - setuptime_coil
         job['latest_start'] = latest_start_time
 
         if desired_start_date == None:
@@ -470,7 +454,7 @@ def simulate_and_schedule(ids, input_jobs):
 if __name__ == "__main__":
     df_init = orders.get_westaflex_orders()
 
-    sorting_tech = "LJF"
+    sorting_tech = "deadline"
     # baseline approaches, presorts the joblist
     if sorting_tech == "SJF":
         df = df_init.sort_values(by='duration_machine')

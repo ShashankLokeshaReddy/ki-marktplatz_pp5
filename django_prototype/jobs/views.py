@@ -175,8 +175,8 @@ def get_makespan(self, job_list):
                 hours, minutes, seconds = map(int, str(job["setuptime_coil"]).split(":"))
                 td = timedelta(hours=hours, minutes=minutes, seconds=seconds)
                 setuptime_coil = pd.Timedelta(td)
-                print(type(string_to_timestamp(job["final_start"])), type(job["setuptime_material"]))
-                print(job["final_start"], job["setuptime_material"])
+                # print(type(string_to_timestamp(job["final_start"])), type(job["setuptime_material"]))
+                # print(job["final_start"], job["setuptime_material"])
                 min_start = string_to_timestamp(job["final_start"]) - setuptime_material - setuptime_coil
                 # print(min_start, string_to_timestamp(job["final_start"]), job["setuptime_material"], job["setuptime_coil"])
             if not max_end or string_to_timestamp(job["final_end"]) > max_end:
@@ -194,8 +194,8 @@ def calculate_machine_utilization(self, job_list):
         hours, minutes, seconds = map(int, str(job["setuptime_coil"]).split(":"))
         td = timedelta(hours=hours, minutes=minutes, seconds=seconds)
         setuptime_coil = pd.Timedelta(td)
-        print(type(string_to_timestamp(job["final_start"])), type(job["setuptime_material"]))
-        print(job["final_start"], job["setuptime_material"])
+        # print(type(string_to_timestamp(job["final_start"])), type(job["setuptime_material"]))
+        # print(job["final_start"], job["setuptime_material"])
         setup_start = string_to_timestamp(job["final_start"]) - setuptime_material - setuptime_coil
         final_end = string_to_timestamp(job["final_end"])
         # if duration <= 0:
