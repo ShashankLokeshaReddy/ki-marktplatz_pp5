@@ -133,12 +133,12 @@ export default defineComponent({
                 const formattedDate = date.toISOString().substring(0, 10);
                 if (holidays.includes(formattedDate)) {
                     classNames.push("weekend-non-operating-hours");
-                } else if ( (hour < startHour || hour >= endHour) && ![0, 6].includes(date.getDay()) ) {
-                    classNames.push("non-operating-hours");
                 } else if ( ([0, 6].includes(date.getDay())) ) {
                     classNames.push("weekend-non-operating-hours");
-                } else {
+                } else if ( ! (hour < startHour || hour >= endHour) && ![0, 6].includes(date.getDay()) ) {
                     classNames.push("operating-hours");
+                } else {
+                    classNames.push("non-operating-hours");
                 }
                 
                 if (isLabel) {
@@ -155,12 +155,12 @@ export default defineComponent({
                 const formattedDate = date.toISOString().substring(0, 10);
                 if (holidays.includes(formattedDate)) {
                     classNames.push("weekend-non-operating-hours");
-                } else if ( (hour < startHour || hour >= endHour) && ![0, 6].includes(date.getDay()) ) {
-                    classNames.push("non-operating-hours");
                 } else if ( ([0, 6].includes(date.getDay())) ) {
                     classNames.push("weekend-non-operating-hours");
-                } else {
+                } else if ( ! (hour < startHour || hour >= endHour) && ![0, 6].includes(date.getDay()) ) {
                     classNames.push("operating-hours");
+                } else {
+                    classNames.push("non-operating-hours");
                 }
                 
                 if (isLabel) {
@@ -217,7 +217,7 @@ export default defineComponent({
             },
             events: [] as { resourceId : string; title: string; start: Date; end: Date; eventTextColor : string;}[],
             eventDidMount: (info) => {
-                info.el.style.background = `blue`;
+                info.el.style.background = `purple`;
                 info.el.style.color = "white";
             },
             eventResize: (info) => {
@@ -400,7 +400,7 @@ export default defineComponent({
                 "title":output[i]["job"],
                 "start":output[i]["final_start"],
                 "end":output[i]["final_end"],
-                "eventColor":"blue",
+                "eventColor":"purple",
                 "display":'auto',
                 "className": "fwd",
                 "extendedProps": {
@@ -459,13 +459,13 @@ export default defineComponent({
     vertical-align: center;
 }
 .slot-label.operating-hours {
-  background-color: #d3d3d3;
+  background-color: #FFFFE0;
 }
 .slot-label.non-operating-hours {
-  background-color: #7f7f7f;
+  background-color: #FFFF00;
 }
 .slot-label.weekend-non-operating-hours {
-  background-color: #151515;
+  background-color: #FFA700;
   color: #FFFFFF;
 }
 .date-label {

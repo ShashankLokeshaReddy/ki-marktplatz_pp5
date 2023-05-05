@@ -127,12 +127,12 @@ export default defineComponent({
                 const formattedDate = date.toISOString().substring(0, 10);
                 if (holidays.includes(formattedDate)) {
                     classNames.push("weekend-non-operating-hours");
-                } else if ( (hour < startHour || hour >= endHour) && ![0, 6].includes(date.getDay()) ) {
-                    classNames.push("non-operating-hours");
                 } else if ( ([0, 6].includes(date.getDay())) ) {
                     classNames.push("weekend-non-operating-hours");
-                } else {
+                } else if ( ! (hour < startHour || hour >= endHour) && ![0, 6].includes(date.getDay()) ) {
                     classNames.push("operating-hours");
+                } else {
+                    classNames.push("non-operating-hours");
                 }
                 
                 if (isLabel) {
@@ -149,12 +149,12 @@ export default defineComponent({
                 const formattedDate = date.toISOString().substring(0, 10);
                 if (holidays.includes(formattedDate)) {
                     classNames.push("weekend-non-operating-hours");
-                } else if ( (hour < startHour || hour >= endHour) && ![0, 6].includes(date.getDay()) ) {
-                    classNames.push("non-operating-hours");
                 } else if ( ([0, 6].includes(date.getDay())) ) {
                     classNames.push("weekend-non-operating-hours");
-                } else {
+                } else if ( ! (hour < startHour || hour >= endHour) && ![0, 6].includes(date.getDay()) ) {
                     classNames.push("operating-hours");
+                } else {
+                    classNames.push("non-operating-hours");
                 }
                 
                 if (isLabel) {
@@ -243,14 +243,14 @@ export default defineComponent({
                     var numerator = bck_event.end - override_start;
                     var denominator = override_end - override_start;
                     var delta = numerator*100/denominator;
-                    info.el.style.background = `linear-gradient(90deg, blue ${delta}%, red 0%)`;
+                    info.el.style.background = `linear-gradient(90deg, purple ${delta}%, red 0%)`;
                     info.el.style.color = "white";
                 }
                 else if(info.event.classNames[0] === "bck"){
                     info.el.style.background = `green`;
                 }
                 else{
-                    info.el.style.background = `blue`;
+                    info.el.style.background = `purple`;
                     info.el.style.color = "white";
                 }
             },
@@ -311,10 +311,10 @@ export default defineComponent({
                     var numerator = bck_event.end - override_start;
                     var denominator = override_end - override_start;
                     var delta = numerator*100/denominator;
-                    info.el.style.background = `linear-gradient(90deg, blue ${delta}%, red 0%)`;
+                    info.el.style.background = `linear-gradient(90deg, purple ${delta}%, red 0%)`;
                 }
                 else{
-                    info.el.style.background = `blue`;
+                    info.el.style.background = `purple`;
                 }
 
                 // Calculate the duration between the original start and end times
@@ -423,10 +423,10 @@ export default defineComponent({
                     var numerator = bck_event.end - override_start;
                     var denominator = override_end - override_start;
                     var delta = numerator*100/denominator;
-                    info.el.style.background = `linear-gradient(90deg, blue ${delta}%, red 0%)`;
+                    info.el.style.background = `linear-gradient(90deg, purple ${delta}%, red 0%)`;
                 }
                 else{
-                    info.el.style.background = `blue`;
+                    info.el.style.background = `purple`;
                 }
 
                // Calculate the duration between the original start and end times
@@ -521,7 +521,7 @@ export default defineComponent({
                     "title":output[i]["selected_machine"],
                     "start":output[i]["final_start"],
                     "end":output[i]["final_end"],
-                    "eventColor":"blue",
+                    "eventColor":"purple",
                     "display":'auto',
                     "className": "fwd",
                     "extendedProps": {
@@ -581,13 +581,13 @@ export default defineComponent({
     vertical-align: center;
 }
 .slot-label.operating-hours {
-  background-color: #d3d3d3;
+  background-color: #FFFFE0;
 }
 .slot-label.non-operating-hours {
-  background-color: #7f7f7f;
+  background-color: #FFFF00;
 }
 .slot-label.weekend-non-operating-hours {
-  background-color: #151515;
+  background-color: #FFA700;
   color: #FFFFFF;
 }
 .date-label {
