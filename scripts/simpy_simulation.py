@@ -176,17 +176,19 @@ class ManufacturingLayer:
             total_duration = 0
             start_datetime = datetime.fromtimestamp(start)
             while valid_duration < duration_machine:
-                if start_datetime.time() >= datetime.strptime("07:00", "%H:%M").time() and start_datetime.time() < datetime.strptime("23:00", "%H:%M").time() and start_datetime.weekday() < 5 and start_datetime.strftime('%Y-%m-%d') not in holidays:
-                    if total_duration == 0 and (start_datetime.date() == (start_datetime + timedelta(seconds=duration_machine)).date() and start_datetime.time() >= datetime.strptime("07:00", "%H:%M").time() and (start_datetime + timedelta(seconds=duration_machine)).time() <= datetime.strptime("23:00", "%H:%M").time()):
+                if start_datetime.time() >= datetime.strptime("06:00", "%H:%M").time() and start_datetime.time() < datetime.strptime("22:00", "%H:%M").time() and start_datetime.weekday() < 5 and start_datetime.strftime('%Y-%m-%d') not in holidays:
+                    if total_duration == 0 and (start_datetime.date() == (start_datetime + timedelta(seconds=duration_machine)).date() and start_datetime.time() >= datetime.strptime("06:00", "%H:%M").time() and (start_datetime + timedelta(seconds=duration_machine)).time() <= datetime.strptime("22:00", "%H:%M").time()):
                         valid_duration += duration_machine
                         total_duration += duration_machine
                         start_datetime += timedelta(seconds=duration_machine)
+                        break
                         # print(total_duration, "1st if", start_datetime)
-                    elif total_duration != 0 and (start_datetime.date() == (start_datetime + timedelta(seconds=duration_machine)).date() and start_datetime.time() >= datetime.strptime("07:00", "%H:%M").time() and (start_datetime + timedelta(seconds=duration_machine)).time() <= datetime.strptime("23:00", "%H:%M").time()):
+                    elif total_duration != 0 and (start_datetime.date() == (start_datetime + timedelta(seconds=duration_machine)).date() and start_datetime.time() >= datetime.strptime("06:00", "%H:%M").time() and (start_datetime + timedelta(seconds=duration_machine)).time() <= datetime.strptime("22:00", "%H:%M").time()):
                         pending_duration = duration_machine - valid_duration
                         valid_duration += pending_duration
                         total_duration += pending_duration
                         start_datetime += timedelta(seconds=pending_duration)
+                        break
                         # print(total_duration, "pending_duration", pending_duration, start_datetime)
                     else:
                         valid_duration += 1
@@ -365,9 +367,19 @@ def simulate_and_schedule(ids, input_jobs):
                 # print(desired_start_date, end_max)
                 desired_start_date = max(string_to_timestamp(desired_start_date).timestamp(), end_max)
                 print(f"final_end_max time for the scheduled batch of jobs: {datetime.fromtimestamp(end_max)}")
-            print(f"Desired start time for the batch of jobs: {datetime.fromtimestamp(desired_start_date)}")
+            desired_start = datetime.fromtimestamp(desired_start_date)
+            while True:
+                if (desired_start.weekday() < 5 and desired_start.strftime('%Y-%m-%d') not in holidays
+                    and desired_start.time() >= datetime.strptime("06:00", "%H:%M").time()
+                    and desired_start.time() < datetime.strptime("22:00", "%H:%M").time()):
+                    break
+                else:
+                    desired_start = desired_start.replace(hour=6, minute=0, second=0, microsecond=0)
+                    one_day = timedelta(days=1)
+                    desired_start += one_day
+            print(f"Desired start time for the batch of jobs: {desired_start}")
 
-            env = simpy.Environment(initial_time = desired_start_date)
+            env = simpy.Environment(initial_time = string_to_timestamp(desired_start).timestamp())
             m1531 = Machine(env, "1531")
             m1532 = Machine(env, "1532")
             m1533 = Machine(env, "1533")

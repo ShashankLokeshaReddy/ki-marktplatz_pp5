@@ -134,6 +134,7 @@ export default defineComponent({
                 }
             ],
 
+            resourceGroupField: 'resourcegroup',
             resources: [],
             events: [] as { resourceId : string; title: string; start: Date; end: Date; eventTextColor : string;}[],
             eventDidMount: (info) => {
@@ -265,8 +266,19 @@ export default defineComponent({
 
             var resources_var: { id: string; title: string }[] = [];
             for (var i = 0; i < output.length; ++i) {
+                var resourcegroup = null;
+                if (output[i]["selected_machine"] == "1535" || output[i]["selected_machine"] == "1536" || output[i]["selected_machine"] == "1537"){
+                    resourcegroup = "Gruppe 1";
+                }
+                if (output[i]["selected_machine"] == "1532" || output[i]["selected_machine"] == "1533" || output[i]["selected_machine"] == "1534"){
+                    resourcegroup = "Gruppe 2";
+                }
+                if (output[i]["selected_machine"] == "1531" || output[i]["selected_machine"] == "1541" || output[i]["selected_machine"] == "1542" || output[i]["selected_machine"] == "1543"){
+                    resourcegroup = "Gruppe 3";
+                }
                 var temp_res = {
                     "id":output[i]["job"],
+                    "resourcegroup":resourcegroup,
                     "title":output[i]["job"]
                 };
                 resources_var.push(temp_res);
