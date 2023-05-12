@@ -164,6 +164,34 @@ class ManufacturingLayer:
 
             start = self.env.now
             job["final_start"] = datetime.fromtimestamp(start).strftime("%Y-%m-%d %H:%M:%S")
+            valid_duration = 0
+            total_duration = 0
+            start_datetime = datetime.fromtimestamp(start)
+            one_day = timedelta(days=1)
+            # Check if the start datetime is within operational hours
+            if not (start_datetime.time() >= datetime.strptime("06:00", "%H:%M").time() and start_datetime.time() < datetime.strptime("22:00", "%H:%M").time()):
+                # If not, adjust the start datetime to the next valid operational hour
+                while True:
+                    if start_datetime.weekday() < 5 and start_datetime.strftime('%Y-%m-%d') not in holidays:
+                        if start_datetime.time() >= datetime.strptime("00:00", "%H:%M").time() and start_datetime.time() < datetime.strptime("06:00", "%H:%M").time():
+                            start_datetime = start_datetime.replace(hour=6, minute=0, second=0, microsecond=0)
+                            print("Adjusted start_datetime to 6:00")
+                        elif start_datetime.time() > datetime.strptime("22:00", "%H:%M").time() or start_datetime.time() < datetime.strptime("06:00", "%H:%M").time():
+                            start_datetime = start_datetime.replace(hour=6, minute=0, second=0, microsecond=0)
+                            one_day = timedelta(days=1)
+                            start_datetime += one_day
+                            print("Adjusted start_datetime to 6:00 of next day")
+                    else:
+                        start_datetime = start_datetime.replace(hour=6, minute=0, second=0, microsecond=0)
+                        one_day = timedelta(days=1)
+                        start_datetime += one_day
+                        print("Adjusted start_datetime to 6:00 of next weekday")
+                    
+                    if start_datetime.time() >= datetime.strptime("06:00", "%H:%M").time() and start_datetime.time() <= datetime.strptime("22:00", "%H:%M").time() and start_datetime.weekday() < 5 and start_datetime.strftime('%Y-%m-%d') not in holidays and start_datetime.weekday() != 5 and start_datetime.weekday() != 6:
+                        job["final_start"] = start_datetime.strftime("%Y-%m-%d %H:%M:%S")
+                        print("Final start datetime:", start_datetime.strftime("%Y-%m-%d %H:%M:%S"))
+                        break
+
             start_time_comp = string_to_timestamp(job["final_start"])
             if start_time_comp < release_time:
                 print("Error in start time calculation")
@@ -172,36 +200,35 @@ class ManufacturingLayer:
             job["selected_machine"] = chosen_machine.name
             if logging:
                 print(f"Job {job['job']} on Machine {job['selected_machine']} starts at {job['final_start']}")
-            valid_duration = 0
-            total_duration = 0
-            start_datetime = datetime.fromtimestamp(start)
+
             while valid_duration < duration_machine:
-                if start_datetime.time() >= datetime.strptime("06:00", "%H:%M").time() and start_datetime.time() < datetime.strptime("22:00", "%H:%M").time() and start_datetime.weekday() < 5 and start_datetime.strftime('%Y-%m-%d') not in holidays:
+                if start_datetime.time() >= datetime.strptime("06:00", "%H:%M").time() and start_datetime.time() <= datetime.strptime("22:00", "%H:%M").time() and start_datetime.weekday() < 5 and start_datetime.strftime('%Y-%m-%d') not in holidays:
                     if total_duration == 0 and (start_datetime.date() == (start_datetime + timedelta(seconds=duration_machine)).date() and start_datetime.time() >= datetime.strptime("06:00", "%H:%M").time() and (start_datetime + timedelta(seconds=duration_machine)).time() <= datetime.strptime("22:00", "%H:%M").time()):
                         valid_duration += duration_machine
                         total_duration += duration_machine
                         start_datetime += timedelta(seconds=duration_machine)
-                        break
+                        # break
                         # print(total_duration, "1st if", start_datetime)
                     elif total_duration != 0 and (start_datetime.date() == (start_datetime + timedelta(seconds=duration_machine)).date() and start_datetime.time() >= datetime.strptime("06:00", "%H:%M").time() and (start_datetime + timedelta(seconds=duration_machine)).time() <= datetime.strptime("22:00", "%H:%M").time()):
                         pending_duration = duration_machine - valid_duration
                         valid_duration += pending_duration
                         total_duration += pending_duration
                         start_datetime += timedelta(seconds=pending_duration)
-                        break
+                        # break
                         # print(total_duration, "pending_duration", pending_duration, start_datetime)
                     else:
-                        valid_duration += 1
-                        total_duration += 1
-                        start_datetime += timedelta(seconds=1)
+                        valid_duration += 60
+                        total_duration += 60
+                        start_datetime += timedelta(seconds=60)
                         # print(total_duration, "else", start_datetime)
                 else:
-                    total_duration += 1
-                    start_datetime += timedelta(seconds=1)
+                    total_duration += 60
+                    start_datetime += timedelta(seconds=60)
                     # print(total_duration, "last else", start_datetime)
-                       
+
             yield self.env.timeout(total_duration)
             job["final_end"] = datetime.fromtimestamp(self.env.now).strftime("%Y-%m-%d %H:%M:%S")
+            
             # job["duration_machine"] = string_to_timestamp(job["final_end"]) - string_to_timestamp(job["final_start"])
 
             if logging:
@@ -259,18 +286,40 @@ class ProductionPlant:
         self.manufacturing_layers.append(manufacturing_layer)    
 
 # Makespan = End time of last job - (Start time of first job - Setup time)
-def get_makespan(job_list):
+def get_makespan(job_list, exclude_non_operational_hours=True):
     min_start = None
     max_end = None
     for job in job_list:
         if not pd.isna(job["final_start"]):
             if not min_start or string_to_timestamp(job["final_start"]) < min_start:
                 min_start = string_to_timestamp(job["final_start"]) - job["setuptime_material"] - job["setuptime_coil"]
-                # print(min_start, string_to_timestamp(job["final_start"]), job["setuptime_material"], job["setuptime_coil"])
             if not max_end or string_to_timestamp(job["final_end"]) > max_end:
                 max_end = string_to_timestamp(job["final_end"])
-    if min_start != None and max_end != None:
-        return (max_end - min_start).total_seconds()
+    
+    if min_start is not None and max_end is not None:
+        makespan = (max_end - min_start).total_seconds()
+        if exclude_non_operational_hours:
+            # Subtract non-operational hours
+            non_op_hours = 0
+            start = min_start
+            end = max_end
+            while start < end:
+                if start.weekday() < 5 and not (6 <= start.hour < 22):
+                    non_op_hours += 1
+                start += timedelta(hours=1)
+            
+            # Subtract holidays and weekends
+            holidays_and_weekends = 0
+            start = min_start.date()
+            end = max_end.date() + timedelta(days=1)
+            for day in pd.date_range(start=start, end=end, freq='D'):
+                if day.weekday() >= 5 or day.strftime('%Y-%m-%d') in holidays:
+                    holidays_and_weekends += 1
+            
+            makespan -= non_op_hours * 3600
+            makespan -= holidays_and_weekends * 24 * 3600
+
+        return makespan
     else:
         delete_all_elements(max_machine_duration_flag)
         max_machine_duration_flag.append(True)
@@ -371,7 +420,7 @@ def simulate_and_schedule(ids, input_jobs):
             while True:
                 if (desired_start.weekday() < 5 and desired_start.strftime('%Y-%m-%d') not in holidays
                     and desired_start.time() >= datetime.strptime("06:00", "%H:%M").time()
-                    and desired_start.time() < datetime.strptime("22:00", "%H:%M").time()):
+                    and desired_start.time() <= datetime.strptime("22:00", "%H:%M").time()):
                     break
                 else:
                     desired_start = desired_start.replace(hour=6, minute=0, second=0, microsecond=0)
@@ -429,7 +478,7 @@ def simulate_and_schedule(ids, input_jobs):
             manufacturing_layer.schedule_job(jobs_not_scheduled)
             env.run()
 
-            makespan = get_makespan(scheduled_jobs_in_cur_iter)
+            makespan = get_makespan(scheduled_jobs_in_cur_iter, exclude_non_operational_hours=True)
             print("Makespan: ", makespan)
             if makespan != None:
                 makespans_cur_iter.append(makespan)

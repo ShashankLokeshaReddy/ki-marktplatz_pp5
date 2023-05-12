@@ -19,8 +19,8 @@ export default {
           datasets: [{
             label: '% Occupancy',
             data: machineData.map(d => parseFloat(d.percentageOccupancy)),
-            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-            borderColor: 'rgba(54, 162, 235, 1)',
+            backgroundColor: 'rgba(213, 12, 48, 1)',
+            borderColor: 'rgba(35, 48, 56, 1)',
             borderWidth: 1
           }]
         }

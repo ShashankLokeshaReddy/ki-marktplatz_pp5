@@ -1,11 +1,5 @@
 <template>
-  <!--
-  <div id="nav">
-  <router-link to="/">Gantt</router-link>
-  <router-link to="table">Table</router-link>
-  <router-link to="job">Job</router-link>
 
-</div>-->
   <div class="app">
     <Header />
     

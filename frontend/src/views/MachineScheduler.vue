@@ -1,7 +1,7 @@
 <template>
     <div>
         <FullCalendar ref="machinecalendar" :options="calendarOptions">
-         </FullCalendar>
+        </FullCalendar>
     </div>
 </template>
 
@@ -57,15 +57,15 @@ function get_EventorDBDuration(info, totalMilliseconds, resize) {
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
         const isHoliday = holidays.includes(currentDate.toISOString().substring(0, 10));
         const isOperationalHour = !isWeekend && !isHoliday && currentDate.getHours() >= 7 && currentDate.getHours() <= 23;
-        event_duration += 1000;
+        event_duration += 60 * 1000;
         if (isOperationalHour) {
-            duration += 1000; // add 1 sec in milliseconds
+            duration += 60 * 1000; // add 1 sec in milliseconds
         }
         if (totalMilliseconds._milliseconds <= duration)
         {
             duration_flag = false;
         }
-        currentDate.setTime(currentDate.getTime() + 1000); // add 1 sec
+        currentDate.setTime(currentDate.getTime() + 60 * 1000); // add 1 sec
     }
     console.log(totalMilliseconds._milliseconds);
     console.log("duration..",duration);
@@ -217,7 +217,7 @@ export default defineComponent({
             },
             events: [] as { resourceId : string; title: string; start: Date; end: Date; eventTextColor : string;}[],
             eventDidMount: (info) => {
-                info.el.style.background = `purple`;
+                info.el.style.background = `blue`;
                 info.el.style.color = "white";
             },
             eventResize: (info) => {
@@ -266,8 +266,6 @@ export default defineComponent({
                     const startISOString = start_s.toISOString().substring(0, 19) + "Z";
                     const end_s = new Date(info.event.end);
                     const endISOString = end_s.toISOString().substring(0, 19) + "Z";
-                    console.log(convertMillisecondsToDuration(34260000)); // Output: "0:57:06"
-                    
                     console.log("valid_duration_s", valid_duration_s);
 
                     const jobs_data = {
@@ -400,7 +398,7 @@ export default defineComponent({
                 "title":output[i]["job"],
                 "start":output[i]["final_start"],
                 "end":output[i]["final_end"],
-                "eventColor":"purple",
+                "eventColor":"blue",
                 "display":'auto',
                 "className": "fwd",
                 "extendedProps": {
@@ -459,17 +457,18 @@ export default defineComponent({
     vertical-align: center;
 }
 .slot-label.operating-hours {
-  background-color: #FFFFE0;
+  background-color: #FFFFFF;
 }
 .slot-label.non-operating-hours {
-  background-color: #FFFF00;
+  background-color: #F1F1F1;
 }
 .slot-label.weekend-non-operating-hours {
-  background-color: #FFA700;
+  background-color: #233038;
   color: #FFFFFF;
 }
 .date-label {
   font-weight: bold;
   text-align: center;
 }
+
 </style>

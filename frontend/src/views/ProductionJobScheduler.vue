@@ -1,7 +1,7 @@
 <template>
     <div>
         <FullCalendar ref="prodcalendar" :options="calendarOptions">
-         </FullCalendar>
+        </FullCalendar>
     </div>
 </template>
 
@@ -53,15 +53,15 @@ function get_EventorDBDuration(info, totalMilliseconds, resize) {
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
         const isHoliday = holidays.includes(currentDate.toISOString().substring(0, 10));
         const isOperationalHour = !isWeekend && !isHoliday && currentDate.getHours() >= 7 && currentDate.getHours() <= 23;
-        event_duration += 1000;
+        event_duration += 60 * 1000;
         if (isOperationalHour) {
-            duration += 1000; // add 1 sec in milliseconds
+            duration += 60 * 1000; // add 1 sec in milliseconds
         }
         if (totalMilliseconds._milliseconds <= duration)
         {
             duration_flag = false;
         }
-        currentDate.setTime(currentDate.getTime() + 1000); // add 1 sec
+        currentDate.setTime(currentDate.getTime() + 60 * 1000); // add 1 sec
     }
     console.log(totalMilliseconds._milliseconds);
     console.log("duration..",duration);
@@ -162,7 +162,7 @@ export default defineComponent({
                 }
 
                 return classNames.join(" ");
-            },
+            },        
             locale: "ger",
             initialView: 'resourceTimelineDay',
             schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
@@ -243,14 +243,14 @@ export default defineComponent({
                     var numerator = bck_event.end - override_start;
                     var denominator = override_end - override_start;
                     var delta = numerator*100/denominator;
-                    info.el.style.background = `linear-gradient(90deg, purple ${delta}%, red 0%)`;
+                    info.el.style.background = `linear-gradient(90deg, blue ${delta}%, red 0%)`;
                     info.el.style.color = "white";
                 }
                 else if(info.event.classNames[0] === "bck"){
                     info.el.style.background = `green`;
                 }
                 else{
-                    info.el.style.background = `purple`;
+                    info.el.style.background = `blue`;
                     info.el.style.color = "white";
                 }
             },
@@ -311,10 +311,10 @@ export default defineComponent({
                     var numerator = bck_event.end - override_start;
                     var denominator = override_end - override_start;
                     var delta = numerator*100/denominator;
-                    info.el.style.background = `linear-gradient(90deg, purple ${delta}%, red 0%)`;
+                    info.el.style.background = `linear-gradient(90deg, blue ${delta}%, red 0%)`;
                 }
                 else{
-                    info.el.style.background = `purple`;
+                    info.el.style.background = `blue`;
                 }
 
                 // Calculate the duration between the original start and end times
@@ -423,10 +423,10 @@ export default defineComponent({
                     var numerator = bck_event.end - override_start;
                     var denominator = override_end - override_start;
                     var delta = numerator*100/denominator;
-                    info.el.style.background = `linear-gradient(90deg, purple ${delta}%, red 0%)`;
+                    info.el.style.background = `linear-gradient(90deg, blue ${delta}%, red 0%)`;
                 }
                 else{
-                    info.el.style.background = `purple`;
+                    info.el.style.background = `blue`;
                 }
 
                // Calculate the duration between the original start and end times
@@ -521,7 +521,7 @@ export default defineComponent({
                     "title":output[i]["selected_machine"],
                     "start":output[i]["final_start"],
                     "end":output[i]["final_end"],
-                    "eventColor":"purple",
+                    "eventColor":"blue",
                     "display":'auto',
                     "className": "fwd",
                     "extendedProps": {
@@ -581,17 +581,18 @@ export default defineComponent({
     vertical-align: center;
 }
 .slot-label.operating-hours {
-  background-color: #FFFFE0;
+  background-color: #FFFFFF;
 }
 .slot-label.non-operating-hours {
-  background-color: #FFFF00;
+  background-color: #F1F1F1;
 }
 .slot-label.weekend-non-operating-hours {
-  background-color: #FFA700;
+  background-color: #233038;
   color: #FFFFFF;
 }
 .date-label {
   font-weight: bold;
   text-align: center;
 }
+
 </style>

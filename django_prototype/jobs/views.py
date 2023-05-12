@@ -76,8 +76,8 @@ def baseline(self, sorting_tech):
     jobs_data = output[2]
     for job_data in jobs_data:
         job_data['job'] = str(job_data['job'])
-        job_data['final_start'] = datetime.strptime(job_data['final_start'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-        job_data['final_end'] = datetime.strptime(job_data['final_end'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        job_data['final_start'] = datetime.strptime(str(job_data['final_start']), '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        job_data['final_end'] = datetime.strptime(str(job_data['final_end']), '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         job_data['start'] = datetime.strptime(job_data['start'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         job_data['end'] = datetime.strptime(job_data['end'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         job_data['duration_machine'] = format_duration(job_data['duration_machine'])
@@ -124,6 +124,7 @@ def format_ind_time(date_str):
     return final_date_str
 
 pid = []
+holidays = ["2022-01-01", "2022-04-15", "2022-04-16", "2022-04-17", "2022-04-18", "2022-05-01", "2022-05-26", "2022-05-27", "2022-05-28", "2022-06-05", "2022-06-06", "2022-06-16", "2022-06-17", "2022-06-18", "2022-10-03", "2022-10-31", "2022-11-01", "2022-12-24", "2022-12-25", "2022-12-26", "2022-12-27", "2022-12-28", "2022-12-29", "2022-12-30", "2022-12-31"]
 
 def delete_all_elements(my_list):
     for i in range(len(my_list) - 1, -1, -1):
@@ -135,8 +136,8 @@ def run_genetic_optimizer_in_diff_process(self, request, input_jobs):
     jobs_data = output[2]
     for job_data in jobs_data:
         job_data['job'] = str(job_data['job'])
-        job_data['final_start'] = datetime.strptime(job_data['final_start'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-        job_data['final_end'] = datetime.strptime(job_data['final_end'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        job_data['final_start'] = datetime.strptime(str(job_data['final_start']), '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        job_data['final_end'] = datetime.strptime(str(job_data['final_end']), '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         job_data['start'] = datetime.strptime(job_data['start'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         job_data['end'] = datetime.strptime(job_data['end'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         job_data['duration_machine'] = format_duration(job_data['duration_machine'])
@@ -163,26 +164,49 @@ def run_genetic_optimizer_in_diff_process(self, request, input_jobs):
 def string_to_timestamp(datestring):
     return datetime.strptime(str(datestring), "%Y-%m-%dT%H:%M:%SZ")
 
-def get_makespan(self, job_list):
+def get_makespan(self, job_list, exclude_non_operational_hours=True):
     min_start = None
     max_end = None
     for job in job_list:
         if not pd.isna(job["final_start"]):
+            hours, minutes, seconds = map(int, str(job["setuptime_material"]).split(":"))
+            td = timedelta(hours=hours, minutes=minutes, seconds=seconds)
+            setuptime_material = pd.Timedelta(td)
+            hours, minutes, seconds = map(int, str(job["setuptime_coil"]).split(":"))
+            td = timedelta(hours=hours, minutes=minutes, seconds=seconds)
+            setuptime_coil = pd.Timedelta(td)
             if not min_start or string_to_timestamp(job["final_start"]) < min_start:
-                hours, minutes, seconds = map(int, str(job["setuptime_material"]).split(":"))
-                td = timedelta(hours=hours, minutes=minutes, seconds=seconds)
-                setuptime_material = pd.Timedelta(td)
-                hours, minutes, seconds = map(int, str(job["setuptime_coil"]).split(":"))
-                td = timedelta(hours=hours, minutes=minutes, seconds=seconds)
-                setuptime_coil = pd.Timedelta(td)
-                # print(type(string_to_timestamp(job["final_start"])), type(job["setuptime_material"]))
-                # print(job["final_start"], job["setuptime_material"])
                 min_start = string_to_timestamp(job["final_start"]) - setuptime_material - setuptime_coil
-                # print(min_start, string_to_timestamp(job["final_start"]), job["setuptime_material"], job["setuptime_coil"])
             if not max_end or string_to_timestamp(job["final_end"]) > max_end:
                 max_end = string_to_timestamp(job["final_end"])
-    if min_start != None and max_end != None:
-        return (max_end - min_start).total_seconds()
+        
+    if min_start is not None and max_end is not None:
+        makespan = (max_end - min_start).total_seconds()
+        if exclude_non_operational_hours:
+            # Subtract non-operational hours
+            non_op_hours = 0
+            start = min_start
+            end = max_end
+            while start < end:
+                if start.weekday() < 5 and not (6 <= start.hour < 22):
+                    non_op_hours += 1
+                start += timedelta(hours=1)
+            
+            # Subtract holidays and weekends
+            holidays_and_weekends = 0
+            start = min_start.date()
+            end = max_end.date() + timedelta(days=1)
+            for day in pd.date_range(start=start, end=end, freq='D'):
+                if day.weekday() >= 5 or day.strftime('%Y-%m-%d') in holidays:
+                    holidays_and_weekends += 1
+            
+            makespan -= non_op_hours * 3600
+            makespan -= holidays_and_weekends * 24 * 3600
+        
+        return makespan
+    else:
+        delete_all_elements(max_machine_duration_flag)
+        max_machine_duration_flag.append(True)
 
 def calculate_machine_utilization(self, job_list):
     machine_duration = defaultdict(int)
@@ -205,7 +229,7 @@ def calculate_machine_utilization(self, job_list):
                 machine_duration[machine] += (final_end - setup_start).total_seconds()
 
     machine_utilization = {}
-    makespan = get_makespan(self, job_list)
+    makespan = get_makespan(self, job_list, exclude_non_operational_hours=True)
     Machine.objects.all().delete()
     for machine in machine_duration:
         utilization = machine_duration[machine] * 100 / makespan

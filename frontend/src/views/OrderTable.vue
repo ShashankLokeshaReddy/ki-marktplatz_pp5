@@ -2,21 +2,21 @@
   <v-container>
     <v-row align="center">
       <v-col align="center" class="mb-4">
-        <v-btn class="bordered flex-grow-1 mr-2" @click="runSJF">SJF</v-btn>
-        <v-btn class="bordered flex-grow-1 mr-2" @click="runLJF">LJF</v-btn>
-        <v-btn class="bordered flex-grow-1 mr-2" @click="runDeadlineFirst">Early Deadline</v-btn>
-        <v-btn class="bordered flex-grow-1 mr-2" @click="runReleaseFirst">Early Release</v-btn>
-        <v-btn class="bordered flex-grow-1" @click="runRandom">Random</v-btn>
+        <button class="bordered flex-grow-1 mr-2"  @click="runSJF">SJF</button>
+        <button class="bordered flex-grow-1 mr-2"  @click="runLJF">LJF</button>
+        <button class="bordered flex-grow-1 mr-2"  @click="runDeadlineFirst">Early Deadline</button>
+        <button class="bordered flex-grow-1 mr-2"  @click="runReleaseFirst">Early Release</button>
+        <button class="bordered flex-grow-1"  @click="runRandom">Random</button>
       </v-col>
       <v-col align="center" class="mb-4">
-        <v-btn class="bordered flex-grow-1 mr-2" @click="runGeneticOptimizer">Genetic Optimizer</v-btn>
-        <v-btn class="bordered flex-grow-1 mr-2" color="error" @click="stopProcess">GA stoppen</v-btn>
-        <v-btn class="bordered flex-grow-1 mr-2" @click="saveJobs">Save Job Orders</v-btn>
+        <button class="bordered flex-grow-1 mr-2"  @click="runGeneticOptimizer">Genetic Optimizer</button>
+        <button class="bordered flex-grow-1 mr-2"  @click="stopProcess">GA stoppen</button>
+        <button class="bordered flex-grow-1 mr-2"  @click="saveJobs">Save Job Orders</button>
       </v-col>
       <v-col align="center" class="mb-4">
-        <input type="file" ref="fileInput" @change="handleFileUpload"/>
-        <v-btn class="bordered" @click="upload">Arbeitsaufträge hochladen</v-btn>
-        <v-btn class="bordered" color="error" @click="deleteJobs">Arbeitsaufträge löschen</v-btn>
+        <input type="file" ref="fileInput"  @change="handleFileUpload"/>
+        <button class="bordered"  @click="upload">Arbeitsaufträge hochladen</button>
+        <button class="bordered"  @click="deleteJobs">Arbeitsaufträge löschen</button>
       </v-col>
     </v-row>
   </v-container>
@@ -25,7 +25,7 @@
     <v-progress-circular
       :size="70"
       :width="7"
-      color="primary"
+      color=#D50C30
       indeterminate
     ></v-progress-circular>
   </v-container>
@@ -311,30 +311,30 @@ export default {
 </script>
 
 <style>
-  button.v-btn {
+  button {
     border: 1px solid #ccc;
     border-radius: 4px;
     padding: 6px 12px; /* smaller padding */
     font-size: 12px; /* smaller font size */
     font-weight: 500;
     text-transform: uppercase;
-    color: #333;
-    background-color: #fff;
+    color: #FFFFFF;
+    background-color: #233038;
   }
 
-  button.v-btn:hover {
+  button:hover {
     border-color: #999;
-    color: #666;
-    background-color: #f5f5f5;
+    color: #D50C30;
+    background-color: #233038;
   }
 
-  button.v-btn:active,
-  button.v-btn:focus {
+  button:active,
+  button:focus {
     outline: none;
     box-shadow: none;
   }
 
-  label.v-btn {
+  label {
     border: 1px solid #ccc;
     border-radius: 4px;
     padding: 6px 12px; /* smaller padding */
@@ -345,15 +345,16 @@ export default {
     background-color: #fff;
   }
 
-  label.v-btn:hover {
+  label:hover {
     border-color: #999;
     color: #666;
     background-color: #f5f5f5;
   }
 
-  label.v-btn:active,
-  label.v-btn:focus {
+  label:active,
+  label:focus {
     outline: none;
     box-shadow: none;
   }
 </style>
+

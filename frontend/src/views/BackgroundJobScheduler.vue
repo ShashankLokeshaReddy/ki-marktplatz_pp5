@@ -1,7 +1,7 @@
 <template>
     <div>
         <FullCalendar ref="calendar" :options="calendarOptions">
-         </FullCalendar>
+        </FullCalendar>
     </div>
 </template>
 
@@ -170,14 +170,14 @@ export default defineComponent({
                     var numerator = bck_event.end - override_start;
                     var denominator = override_end - override_start;
                     var delta = numerator*100/denominator;
-                    info.el.style.background = `linear-gradient(90deg, purple ${delta}%, red 0%)`;
+                    info.el.style.background = `linear-gradient(90deg, blue ${delta}%, red 0%)`;
                     info.el.style.color = "white";
                 }
                 else if(info.event.classNames[0] === "bck"){
                     info.el.style.background = `green`;
                 }
                 else{
-                    info.el.style.background = `purple`;
+                    info.el.style.background = `blue`;
                     info.el.style.color = "white";
                 }
             },
@@ -256,7 +256,7 @@ export default defineComponent({
                     "start":output[i]["final_start"],
                     "end":output[i]["final_end"],
                     "display": 'background',
-                    "eventColor":"purple",
+                    "eventColor":"blue",
                     "className": "fwd"
                 };
 
@@ -311,17 +311,18 @@ export default defineComponent({
     vertical-align: center;
 }
 .slot-label.operating-hours {
-  background-color: #FFFFE0;
+  background-color: #FFFFFF;
 }
 .slot-label.non-operating-hours {
-  background-color: #FFFF00;
+  background-color: #F1F1F1;
 }
 .slot-label.weekend-non-operating-hours {
-  background-color: #FFA700;
+  background-color: #233038;
   color: #FFFFFF;
 }
 .date-label {
   font-weight: bold;
   text-align: center;
 }
+
 </style>
