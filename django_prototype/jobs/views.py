@@ -232,7 +232,7 @@ def calculate_machine_utilization(self, job_list):
     makespan = get_makespan(self, job_list, exclude_non_operational_hours=False)
     Machine.objects.all().delete()
     for machine in machine_duration:
-        utilization = machine_duration[machine] * 100 / makespan
+        utilization = machine_duration[machine] * 100 / (makespan * 24 * 3600)
         machine_utilization[machine] = utilization
         machine_entry = Machine.objects.create(machineId=machine, percentageOccupancy=utilization, maxDuration=machine_duration[machine])
 
