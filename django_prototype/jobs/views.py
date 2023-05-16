@@ -164,7 +164,7 @@ def run_genetic_optimizer_in_diff_process(self, request, input_jobs):
 def string_to_timestamp(datestring):
     return datetime.strptime(str(datestring), "%Y-%m-%dT%H:%M:%SZ")
 
-def get_makespan(self, job_list, exclude_non_operational_hours=True):
+def get_makespan(self, job_list, exclude_non_operational_hours=False):
     min_start = None
     max_end = None
     for job in job_list:
@@ -202,7 +202,7 @@ def get_makespan(self, job_list, exclude_non_operational_hours=True):
             
             makespan -= non_op_hours * 3600
             makespan -= holidays_and_weekends * 24 * 3600
-        
+        makespan = round(makespan / (24*3600), 2)
         return makespan
     else:
         delete_all_elements(max_machine_duration_flag)
@@ -229,7 +229,7 @@ def calculate_machine_utilization(self, job_list):
                 machine_duration[machine] += (final_end - setup_start).total_seconds()
 
     machine_utilization = {}
-    makespan = get_makespan(self, job_list, exclude_non_operational_hours=True)
+    makespan = get_makespan(self, job_list, exclude_non_operational_hours=False)
     Machine.objects.all().delete()
     for machine in machine_duration:
         utilization = machine_duration[machine] * 100 / makespan

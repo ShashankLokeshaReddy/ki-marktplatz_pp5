@@ -17,7 +17,7 @@
         <p>Optimierungsstatus: {{ mappedStatus }}</p>
       </v-col>
       <v-col align="center">
-          <p>Makespan: {{ makespan }} seconds</p>
+          <p>Makespan: {{ makespan }} Tage</p>
       </v-col>
     </v-row>
   </v-container>
