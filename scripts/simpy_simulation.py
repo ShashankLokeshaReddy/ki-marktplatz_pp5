@@ -113,7 +113,7 @@ class ManufacturingLayer:
 
     def run_job(self, job):
         # TODO: desired_start hardcoded for demo purpose
-        job["order_release"] = "2021-10-24 00:00:00"
+        # job["order_release"] = "2021-10-24 00:00:00"
         release_time = string_to_timestamp(job["order_release"]) # "2021-09-01 00:00:00"
         earliest_prod_start_time = self.env.now
         current_time = datetime.fromtimestamp(self.env.now)
@@ -272,7 +272,7 @@ class ProductionPlant:
         self.manufacturing_layers.append(manufacturing_layer)    
 
 # Makespan = End time of last job - (Start time of first job - Setup time)
-def get_makespan(job_list, exclude_non_operational_hours=True):
+def get_makespan(job_list, exclude_non_operational_hours=False):
     min_start = None
     max_end = None
     for job in job_list:
@@ -414,7 +414,7 @@ def simulate_and_schedule(ids, input_jobs):
                     desired_start += one_day
             print(f"Desired start time for the batch of jobs: {desired_start}")
             # TODO: desired_start hardcoded for demo purpose
-            desired_start = "2021-10-24 06:00:00"
+            # desired_start = "2021-10-24 06:00:00"
             env = simpy.Environment(initial_time = string_to_timestamp(desired_start).timestamp())
             m1531 = Machine(env, "1531")
             m1532 = Machine(env, "1532")
@@ -465,7 +465,7 @@ def simulate_and_schedule(ids, input_jobs):
             manufacturing_layer.schedule_job(jobs_not_scheduled)
             env.run()
 
-            makespan = get_makespan(scheduled_jobs_in_cur_iter, exclude_non_operational_hours=True)
+            makespan = get_makespan(scheduled_jobs_in_cur_iter, exclude_non_operational_hours=False)
             print("Makespan: ", makespan)
             if makespan != None:
                 makespans_cur_iter.append(makespan)
