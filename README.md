@@ -13,10 +13,14 @@ Open the console and navigate into the root folder of the project and (depending
 ![Container](attachments/container.png)
 
 ## Admin console of Django Server and Super User Creation
-Step 1: Open the terminal of the web conatiner and type "cd django_prototype" cmd
+Step 1: Open the terminal of the web conatiner and type "cd django_prototype" cmd.
+
 Step 2: Enter cmd "python manage.py migrate" to migrate the database.
+
 Step 3: Create super user with the cmd "python manage.py createsuperuser --username=some_username --email=some_email" and also enter the passwords after that.
+
 Step 4: Upon successful creation of super user, navigate to this url "http://localhost:8000/admin" and login as an admin. 
+
 Step 5: Create an entry in the Details table  as shown in the below picture.
 
 ![Details](attachments/details.png)
