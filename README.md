@@ -6,17 +6,18 @@ Status of Main:
 [![pipeline status](https://gitlab.cc-asp.fraunhofer.de/arise-project/arise-prototype/badges/main/pipeline.svg)](https://gitlab.cc-asp.fraunhofer.de/arise-project/arise-prototype/-/commits/main)
 [![coverage report](https://gitlab.cc-asp.fraunhofer.de/arise-project/arise-prototype/badges/main/coverage.svg)](https://gitlab.cc-asp.fraunhofer.de/arise-project/arise-prototype/-/commits/main)
 
-## Starting the Django Server
+## Starting the Django Server and frontend
 
-Open the console and navigate into the folder `django_prototype` and (depending on your system) type `docker compose up`
-or `docker-compose up`. To shutdown, open a separate terminal tab or window and type `docker compose down`
-or `docker-compose down`
-respectively.
+Open the console and navigate into the root folder of the project and (depending on your system) type `docker compose up` or `docker-compose up`. To shutdown, open a separate terminal tab or window and type `docker compose down` or `docker-compose down` respectively. This should create 3 images "some_folder_name-web" for the django_prototype, node for the frontend and postgres for the database. The containers should also get started and they should typically look like below indicating that django backend server and the frontend can now be started through their respective ports in the localhost.
+(attachments/container.png)
 
-## Starting the frontend
-Open the console and navigate into the folder `frontend/src` and type `npm run serve`. In order for this to work you need to have npm and vuejs installed. You can then access the server on the webadress displayed in the console.
-You need to have both, the frontend and the Django Server up and running for the webapp to work properly.
-
+## Admin console of Django Server and Super User Creation
+Step 1: Open the terminal of the web conatiner and type "cd django_prototype" cmd
+Step 2: Enter cmd "python manage.py migrate" to migrate the database.
+Step 3: Create super user with the cmd "python manage.py createsuperuser --username=some_username --email=some_email" and also enter the passwords after that.
+Step 4: Upon successful creation of super user, navigate to this url "http://localhost:8000/admin" and login as an admin. 
+Step 5: Create an entry in the Details table  as shown in the below picture (attachments/details.png)
+Step 6: Once done, the frontend app can be started successfully in 8080 port. The jobs  can be imported into the database either through the admin console (http://localhost:8000/admin/jobs/job/import/) or directly through the front end app.
 
 ## Code Metrics
 
