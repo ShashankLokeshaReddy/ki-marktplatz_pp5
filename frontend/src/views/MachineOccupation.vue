@@ -10,7 +10,7 @@ import axios from 'axios'
 
 export default {
   mounted() {
-    axios.get('http://localhost:8000/api/jobs/getUtilization')
+    axios.get('http://${window.location.host}:8000/api/jobs/getUtilization')
       .then(response => {
         const machineData = response.data.MachineData
         console.log(machineData)

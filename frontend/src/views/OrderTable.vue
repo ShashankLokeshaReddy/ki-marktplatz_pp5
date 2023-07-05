@@ -74,7 +74,7 @@ export default {
       }
       this.isLoading = true; // show loading icon
       axios
-        .post("http://localhost:8000/api/jobs/savejobstoCSV/")
+        .post("http://${window.location.host}:8000/api/jobs/savejobstoCSV/")
         .then((response) => {
           console.log(response.data);
           this.isLoading = false;
@@ -116,7 +116,7 @@ export default {
           formData.append(key, jobs_data[key]);
           }
           
-          axios.post('http://localhost:8000/api/jobs/setInd_Table/', formData)
+          axios.post('http://${window.location.host}:8000/api/jobs/setInd_Table/', formData)
           .then(response => {
               console.log(response.data);
           })
@@ -150,7 +150,7 @@ export default {
         { headerName: "Action", cellRenderer: saveButtonRenderer}
       ];
 
-      fetch("http://localhost:8000/api/jobs/getSchedule")
+      fetch("http://${window.location.host}:8000/api/jobs/getSchedule")
         .then((res) => res.json())
         .then((rowData) => (this.rowData = rowData["Table"]))
         .catch((error) => console.log(error));
@@ -162,7 +162,7 @@ export default {
       }
       this.isLoading = true; // show loading icon
       axios
-        .post("http://localhost:8000/api/jobs/run_genetic_optimizer/")
+        .post("http://${window.location.host}:8000/api/jobs/run_genetic_optimizer/")
         .then((response) => {
           console.log(response.data);
           this.isLoading = false;
@@ -179,7 +179,7 @@ export default {
       }
       this.isLoading = true; // show loading icon
       axios
-        .post("http://localhost:8000/api/jobs/run_sjf/")
+        .post("http://${window.location.host}:8000/api/jobs/run_sjf/")
         .then((response) => {
           console.log(response.data);
           this.isLoading = false;
@@ -196,7 +196,7 @@ export default {
       }
       this.isLoading = true; // show loading icon
       axios
-        .post("http://localhost:8000/api/jobs/run_ljf/")
+        .post("http://${window.location.host}:8000/api/jobs/run_ljf/")
         .then((response) => {
           console.log(response.data);
           this.isLoading = false;
@@ -213,7 +213,7 @@ export default {
       }
       this.isLoading = true; // show loading icon
       axios
-        .post("http://localhost:8000/api/jobs/run_deadline_first/")
+        .post("http://${window.location.host}:8000/api/jobs/run_deadline_first/")
         .then((response) => {
           console.log(response.data);
           this.isLoading = false;
@@ -230,7 +230,7 @@ export default {
       }
       this.isLoading = true; // show loading icon
       axios
-        .post("http://localhost:8000/api/jobs/run_release_first/")
+        .post("http://${window.location.host}:8000/api/jobs/run_release_first/")
         .then((response) => {
           console.log(response.data);
           this.isLoading = false;
@@ -247,7 +247,7 @@ export default {
       }
       this.isLoading = true; // show loading icon
       axios
-        .post("http://localhost:8000/api/jobs/run_random/")
+        .post("http://${window.location.host}:8000/api/jobs/run_random/")
         .then((response) => {
           console.log(response.data);
           this.isLoading = false;
@@ -264,7 +264,7 @@ export default {
       }
       this.isLoading = true; // show loading icon
       axios
-        .post("http://localhost:8000/api/jobs/deleteJobs/")
+        .post("http://${window.location.host}:8000/api/jobs/deleteJobs/")
         .then((response) => {
           console.log(response.data);
           this.isLoading = false;
@@ -277,7 +277,7 @@ export default {
     },
     stopProcess() {
       axios
-        .post("http://localhost:8000/api/jobs/stop_genetic_optimizer/")
+        .post("http://${window.location.host}:8000/api/jobs/stop_genetic_optimizer/")
         .then((response) => {
           console.log(response.data);
           this.fillTable();
@@ -293,7 +293,7 @@ export default {
       const formData = new FormData();
       formData.append('file', this.file);
       this.isLoading = true;
-      axios.post('http://localhost:8000/api/jobs/uploadCSV/', formData)
+      axios.post('http://${window.location.host}:8000/api/jobs/uploadCSV/', formData)
         .then(response => {
           console.log(response.data);
           this.isLoading = false;
