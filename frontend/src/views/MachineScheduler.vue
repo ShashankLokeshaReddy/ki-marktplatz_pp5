@@ -186,7 +186,7 @@ export default defineComponent({
                             return;
                         }
                         axios
-                            .post("http://${window.location.host}:8000/api/jobs/savejobstoCSV/")
+                            .post('http://' + window.location.hostname + ':8000/api/jobs/savejobstoCSV/')
                             .then((response) => {
                             console.log(response.data);
                             this.isLoading = false;
@@ -281,7 +281,7 @@ export default defineComponent({
                     formData.append(key, jobs_data[key]);
                     }
 
-                    axios.post('http://${window.location.host}:8000/api/jobs/setInd/', formData)
+                    axios.post('http://' + window.location.hostname + ':8000/api/jobs/setInd/', formData)
                     .then(response => {
                         console.log(response.data);
                     })
@@ -357,7 +357,7 @@ export default defineComponent({
                 formData.append(key, jobs_data[key]);
                 }
 
-                axios.post('http://${window.location.host}:8000/api/jobs/setInd/', formData)
+                axios.post('http://' + window.location.hostname + ':8000/api/jobs/setInd/', formData)
                 .then(response => {
                 console.log(response.data);
                 })
@@ -382,7 +382,7 @@ export default defineComponent({
         }
     },
     async created(){
-        var response = await fetch('http://${window.location.host}:8000/api/jobs/getSchedule')
+        var response = await fetch('http://' + window.location.hostname + ':8000/api/jobs/getSchedule')
         var output_resp = await response.json()
         var status = output_resp["Status"]
         var output : { selected_machine: string; machines: string; job: string; item: string; start: Date, end: Date, final_start: Date, final_end: Date }[] = [];

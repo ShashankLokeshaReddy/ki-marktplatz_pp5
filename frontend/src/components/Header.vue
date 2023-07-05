@@ -72,7 +72,7 @@ export default {
   },
   methods: {
     fetchData() {
-      axios.get('http://${window.location.host}:8000/api/jobs/getSchedule')
+      axios.get('http://' + window.location.hostname + ':8000/api/jobs/getSchedule')
         .then(response => {
           this.scheduleData = response.data;
         })
@@ -80,7 +80,7 @@ export default {
           console.log(error);
         });
 
-      axios.get('http://${window.location.host}:8000/api/jobs/getMakespanFromDetails')
+      axios.get('http://' + window.location.hostname + ':8000/api/jobs/getMakespanFromDetails')
         .then(response => {
           this.makespanData = response.data;
         })
