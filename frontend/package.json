@@ -1,0 +1,49 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build"
+  },
+  "dependencies": {
+    "@fullcalendar/core": "^5.11.2",
+    "@fullcalendar/daygrid": "^5.11.2",
+    "@fullcalendar/interaction": "^5.11.2",
+    "@fullcalendar/list": "^5.11.2",
+    "@fullcalendar/resource-timeline": "^5.11.2",
+    "@fullcalendar/timegrid": "^5.11.2",
+    "@fullcalendar/vue3": "^5.11.2",
+    "@mdi/font": "5.9.55",
+    "@types/axios": "^0.14.0",
+    "ag-grid-community": "^28.1.1",
+    "ag-grid-vue3": "^28.1.1",
+    "axios": "^1.2.2",
+    "chart.js": "^4.2.1",
+    "core-js": "^3.8.3",
+    "moment": "^2.29.4",
+    "roboto-fontface": "*",
+    "save": "^2.9.0",
+    "vue": "^3.2.13",
+    "vue-chartjs": "^5.2.0",
+    "vue-moment": "^4.1.0",
+    "vue-router": "^4.1.6",
+    "vuetify": "^3.0.0-beta.0",
+    "webfontloader": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/webfontloader": "^1.0.0",
+    "@vue/cli-plugin-babel": "~5.0.0",
+    "@vue/cli-plugin-typescript": "~5.0.0",
+    "@vue/cli-service": "~5.0.0",
+    "typescript": "~4.5.5",
+    "vue-cli-plugin-vuetify": "~2.5.8",
+    "webpack-plugin-vuetify": "^2.0.0-alpha.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "not ie 11"
+  ]
+}

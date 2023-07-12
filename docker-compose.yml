@@ -1,0 +1,32 @@
+version: "3.9"
+   
+services:
+  frontend:
+    build: ./frontend
+    image: node:14
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "8080:8080"
+    command: sh -c "cd /app && npm install && npm run serve"
+  db:
+    image: postgres:13.9
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+    command: postgres -c stats_temp_directory=/tmp
+  web:
+    build: .
+    command: "./django_docker_startup.sh"
+    volumes:
+      - .:/code
+      - ./data:/code/tmp_data
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_NAME=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    depends_on:
+      - db
